@@ -7,6 +7,9 @@ go_backend/config.yaml
 go_backend/config.local*.yaml
 go_backend/**/*_test.go
 
+# 开发文档不随公开源码分发。
+/docs/
+
 # 独立公开仓库不能依赖父目录的忽略规则。
 node_modules/
 dist/

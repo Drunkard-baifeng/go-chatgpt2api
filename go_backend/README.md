@@ -2,7 +2,7 @@
 
 Status: current
 
-本目录提供独立 Go 后端，包含文本与图片协议、异步任务、账号控制面、观测及外部集成。使用 Gin、PostgreSQL、Ent、pgx v5、goose 和 `httpclienttls v1.2.0`；图片放大使用纯 Go `imaging.Lanczos`。不提供 SQLite 驱动、回退或转换，不依赖 Python 运行源码或 Node.js 图片处理。工具链和固定依赖见 [go.mod](go.mod)，安全补丁来源与升级步骤见 [运行时安全基线](../docs/runbooks/deployment-and-cutover.md#运行时安全基线)。
+本目录提供独立 Go 后端，包含文本与图片协议、异步任务、账号控制面、观测及外部集成。使用 Gin、PostgreSQL、Ent、pgx v5、goose 和 `httpclienttls v1.2.0`；图片放大使用纯 Go `imaging.Lanczos`。不提供 SQLite 驱动、回退或转换，不依赖 Python 运行源码或 Node.js 图片处理。工具链和固定依赖见 [go.mod](go.mod)，安全补丁来源见 [运行环境](../README.md#运行环境)。
 
 ## 当前能力
 
@@ -69,7 +69,7 @@ Status: current
 
 代理出口按账号 → 账号组 → 默认配置解析，引用只有 `direct/group/custom`，未指定才继承。组支持随机、轮转和时间窗口选择；无效或停用引用明确失败。节点图片容量由代理所有者预留并由账号 Lease 释放。同一规范化出口 URL（含认证信息）共享计数，多个启用引用采用最小非零上限，0 不额外限制；组内选取有空位的节点，全组满额明确返回 429。连接探测只访问固定 ChatGPT 目标，最多 4 个同时执行、每次 15 秒，不跟随重定向；clearance 明确不支持。备用出口配置可保存，但当前生成链路不切换备用出口。
 
-代理探测从固定 `https://chatgpt.com/cdn-cgi/trace` 的成功响应中提取校验后的出口 IP 和两位地区代码，结果及节点健康同时投影 `status`、`exit_ip`、`country`、`checked_at`，不回显其他响应内容。响应最多 64 KiB；取消或超时覆盖旧健康状态。最近健康仅在当前进程内有界保存，重启丢失。组测试只探测启用节点，总预算 30 秒，返回逐节点结果及完整的成功／部分成功／失败摘要；已保存节点按组与节点 ID 探测时使用服务端认证，不依赖脱敏 URL。操作和验证边界见[代理管理说明](../new_frontend/README.md#代理管理)。
+代理探测从固定 `https://chatgpt.com/cdn-cgi/trace` 的成功响应中提取校验后的出口 IP 和两位地区代码，结果及节点健康同时投影 `status`、`exit_ip`、`country`、`checked_at`，不回显其他响应内容。响应最多 64 KiB；取消或超时覆盖旧健康状态。最近健康仅在当前进程内有界保存，重启丢失。组测试只探测启用节点，总预算 30 秒，返回逐节点结果及完整的成功／部分成功／失败摘要；已保存节点按组与节点 ID 探测时使用服务端认证，不依赖脱敏 URL。操作说明见[代理管理](../new_frontend/README.md#代理管理)。
 
 设置从统一规范校验，保留未知持久字段，支持修订冲突和显式清空敏感项。全局附加指令已从 Go 设置页、设置投影及写入规范移除，不自动向请求注入 system 消息；旧持久字段不再投影或消费，无需数据迁移。业务运行时消费账号处理并发、单账号图片并发、单次数量上限（1–4）、多图并行、图片流/轮询预算、轮询等待、保留小时数及超分开关；控制台读取自己的请求超时。入口实际安装备份、WebDAV、清理和后台账号维护执行者后，设置才投影对应能力。以下七组基础设置已经接入实际消费者，后续调用或调度轮次读取当前值：
 
@@ -225,7 +225,7 @@ CPA/sub2api 连接、来源列表和导入进度由 `remoteimports` 持有，实
 
 ## 备份、清理与升级
 
-备份支持 R2 SigV4、受管前缀内列表与删除、定时调度、轮换及可选 OpenSSL 兼容加密。PostgreSQL 由独立 `pg_dump` 进程读取，要求客户端 17+ 且不低于服务端主版本；Dockerfile 安装 18 客户端。整个归档上限 512 MiB、100000 个文件，包含数据库及选定的三个文件领域快照。各所有者快照分别稳定，**不是跨数据库与文件的同一时点快照**；生产切换恢复必须先停止全部写入者，见 [备份恢复手册](../docs/runbooks/backup-and-restore.md)。本阶段没有生产恢复或切换演练。
+备份支持 R2 SigV4、受管前缀内列表与删除、定时调度、轮换及可选 OpenSSL 兼容加密。PostgreSQL 由独立 `pg_dump` 进程读取，要求客户端 17+ 且不低于服务端主版本；Dockerfile 安装 18 客户端。整个归档上限 512 MiB、100000 个文件，包含数据库及选定的三个文件领域快照。各所有者快照分别稳定，**不是跨数据库与文件的同一时点快照**；生产切换恢复必须先停止全部写入者，同时备份数据库和图片、任务、文件目录，并在独立副本验证恢复。本阶段没有生产恢复或切换演练。
 
 清理服务启动后每 30 分钟检查保留期和账号自动移除策略，也提供管理员 dry-run 与显式执行；活动或维护中的账号不删除。日志清理后重建所需指标，域内失败如实反馈，不把部分清理伪装为全局成功。定期清理不执行远程账号检查。
 
@@ -233,7 +233,7 @@ CPA/sub2api 连接、来源列表和导入进度由 `remoteimports` 持有，实
 
 ## 本地启动
 
-以下命令在 `go_backend/` 执行。安装 [运行时安全基线](../docs/runbooks/deployment-and-cutover.md#运行时安全基线) 指定的 Go，或允许 Go 自动下载 [go.mod](go.mod) 要求的工具链。
+以下命令在 `go_backend/` 执行。安装 [运行环境](../README.md#运行环境) 指定的 Go，或允许 Go 自动下载 [go.mod](go.mod) 要求的工具链。
 
 ```powershell
 if (!(Test-Path ./config.yaml)) { Copy-Item ./config.example.yaml ./config.yaml }
@@ -250,7 +250,7 @@ go run ./cmd/chatgpt2api serve --config ./config.yaml
 
 默认监听 `127.0.0.1:8100`。配置路径必须显式提供，相对路径以调用者工作目录为基准。示例和可选字段定义分别见 [配置示例](config.example.yaml) 与 [配置实现](internal/config/config.go)。
 
-若启动提示“图片目录已被占用或无法加锁”，先检查是否还有旧后端进程，再检查图片目录权限；按[部署与切换手册](../docs/runbooks/deployment-and-cutover.md#postgresql-与启动配置)处理。停止旧进程后由操作系统释放锁，不要删除 `writer.lock`、索引或图片来绕过独占保护。
+若启动提示“图片目录已被占用或无法加锁”，先检查是否还有旧后端进程，再检查图片目录权限。停止旧进程后由操作系统释放锁，不要删除 `writer.lock`、索引或图片来绕过独占保护。
 
 前端使用同源反向代理或 Vite 代理时，保留 `server.allowed_origins: []`。通过 `VITE_API_URL` 直连独立端口时，在 YAML 中明确填写前端来源，例如 `allowed_origins: ["http://localhost:5173"]`，以浏览器实际地址为准；不接受通配符、路径或尾斜杠。预检允许授权头，实际响应允许读取请求 ID 和导出元信息；未授权来源不获得跨域响应头。此策略不替代 Bearer 鉴权，也不使用跨域 Cookie。
 
@@ -298,7 +298,7 @@ go run ./cmd/chatgpt2api db verify --config ./config.yaml
 
 账号协议请求受单次响应头、读取空闲、轮询阶段及整批总截止分别约束；默认单次响应头和读取空闲均为 30 秒。轮询窗口结束后，若已发现图片引用且整批仍有剩余时间，会再解析已有候选，因此可能看到多次等待响应，以及轮询窗口结束后的额外解析；所有步骤仍受整批总截止约束。外站图片字节传输使用上一节的独立预算，不能与站内链接解析混为一谈。
 
-排查时先区分公开 API 状态、每次上游 HTTP 结果及最终业务状态。此前某次上游返回 200，只能证明那次请求成功收到响应，不能证明后续链接解析或出图成功。结合各次诊断中的发送完成、首字节和超时位置判断主要耗时；缺少 DNS/TCP/TLS 回调或未收到响应时，不能据此断言是代理或上游的具体故障。历史未采集的信息不补造；反向代理、客户端预算另见 [部署手册](../docs/runbooks/deployment-and-cutover.md#反向代理与前端)。
+排查时先区分公开 API 状态、每次上游 HTTP 结果及最终业务状态。此前某次上游返回 200，只能证明那次请求成功收到响应，不能证明后续链接解析或出图成功。结合各次诊断中的发送完成、首字节和超时位置判断主要耗时；缺少 DNS/TCP/TLS 回调或未收到响应时，不能据此断言是代理或上游的具体故障。历史未采集的信息不补造；反向代理与客户端预算也须覆盖请求耗时，可参考 [Nginx 示例](../deploy/nginx-server.conf.example)。
 
 ## 构建与验证
 
@@ -337,10 +337,8 @@ Docker 构建上下文改为源码允许清单。使用 Docker 的 `moby/pattern
 
 同日修正连接配置后，在用户指定的本机 PostgreSQL 18.4 上创建随机隔离测试库，重跑上述归档、手工停机快照、17 表对账、恢复启动、Nginx 代理、同端口切换及重启流程，均通过。仅使用假业务数据和临时测试密钥，测试库及进程已清理；指定的业务目标库已存在，未修改其结构或数据，原配置摘要保持不变。
 
-同轮从当前 Python SQLAlchemy 模型 AST 实建 17 表，未导入 Python 运行服务，验证离线接管保留超长令牌、Unicode、未知 JSON、修订和序列。同时复现旧 `asset-UUID` 文件记录通过结构校验后仍导致 Go 启动失败；Python 图库和图片任务也存在格式差异。**完整 Python → Go 文件迁移仍是生产切换阻塞**，具体差异和处理门槛集中见 [部署与切换](../docs/runbooks/deployment-and-cutover.md#python-数据接管门槛)。
+同轮从当前 Python SQLAlchemy 模型 AST 实建 17 表，未导入 Python 运行服务，验证离线接管保留超长令牌、Unicode、未知 JSON、修订和序列。同时复现旧 `asset-UUID` 文件记录通过结构校验后仍导致 Go 启动失败；Python 图库和图片任务也存在格式差异。**完整 Python → Go 文件迁移仍是生产切换阻塞**，当前没有完整文件格式自动迁移命令，不能直接共用原运行数据。
 
 官方临时 Windows Nginx 1.31.8 已验证 [站点示例](../deploy/nginx-server.conf.example) 的语法、独立前端静态/SPA、Go API/鉴权/资产/任务/文件代理，受控上游下 SSE 首帧及时转发且失败 POST 仅收到一次。此证据不覆盖 Linux、容器、真实 HTTPS 站点、CDN 或生产代理。测试进程和随机测试库均已清理，未执行生产切换。
 
-新建容器部署、配置权限、代理预算、恢复及回退操作统一见 [部署与切换手册](../docs/runbooks/deployment-and-cutover.md) 与 [备份与恢复手册](../docs/runbooks/backup-and-restore.md)。[Dockerfile](Dockerfile) 和 [Compose 示例](../docker-compose.yml) 已提供；前端由独立静态服务器托管，API 宿主端口仅绑定回环，PostgreSQL 不暴露宿主端口。容器和生产验证、真实外部链路及用户验收仍待完成，本阶段保持切换准备状态。
-
-当前结构见 [后端图谱](../docs/maps/backend-map.md)，部署与恢复见 [部署手册](../docs/runbooks/deployment-and-cutover.md)。本文维护接口能力、限制和已记录的验证边界。
+容器部署可参考 [Dockerfile](Dockerfile) 和 [Compose 示例](../docker-compose.yml)；前端由独立静态服务器托管，API 宿主端口仅绑定回环，PostgreSQL 不暴露宿主端口。容器和生产验证、真实外部链路及用户验收仍待完成，本阶段保持切换准备状态。
