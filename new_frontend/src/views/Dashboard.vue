@@ -365,7 +365,7 @@ const runtimeDetails = computed(() => {
       value: runtime
         ? runtime.runtime_label || (runtime.runtime_mode === 'docker'
           ? 'Docker'
-          : `Python ${runtime.python_version}`)
+          : `Go ${runtime.go_version}`)
         : '--',
       icon: 'lucide:server-cog',
     },

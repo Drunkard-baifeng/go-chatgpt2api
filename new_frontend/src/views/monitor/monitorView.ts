@@ -29,7 +29,7 @@ const eventTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
 export function formatMonitorEventTime(value: string | null | undefined): string {
   const text = value?.trim()
   if (!text) return '-'
-  // Python 的无时区时间已是北京时间；Go 的 RFC3339 时间需先转换。
+  // 无时区时间按北京时间处理；RFC3339 时间先转换为北京时间。
   const timestamp = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(text)
     ? `${text.replace(' ', 'T')}+08:00`
     : text

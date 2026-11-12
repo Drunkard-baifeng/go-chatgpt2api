@@ -56,6 +56,10 @@ func NewRouter(options Options) (*gin.Engine, error) {
 	if options.Auth == nil || options.Logger == nil || options.Ready == nil {
 		return nil, errors.New("HTTP 服务缺少必要依赖")
 	}
+	console, err := consoleHandler()
+	if err != nil {
+		return nil, err
+	}
 	router := gin.New()
 	if err := router.SetTrustedProxies(options.Config.TrustedProxies); err != nil {
 		return nil, errors.New("可信代理配置无效")
@@ -105,7 +109,7 @@ func NewRouter(options Options) (*gin.Engine, error) {
 	registerUpdateRoutes(router, options)
 	registerEditableFileRoutes(router, options)
 	registerImageStorageRoutes(router, options)
-	router.NoRoute(func(c *gin.Context) { writeError(c, http.StatusNotFound, "not_found_error", "接口不存在") })
+	router.NoRoute(console)
 	return router, nil
 }
 

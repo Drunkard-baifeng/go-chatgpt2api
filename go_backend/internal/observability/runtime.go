@@ -51,7 +51,7 @@ func (s *runtimeSampler) snapshot(ctx context.Context, now time.Time) map[string
 	view := map[string]any{
 		"runtime_mode": reading.Mode, "runtime_label": "Go " + strings.TrimPrefix(runtime.Version(), "go"),
 		"instance_name": reading.Instance, "distribution": reading.Distribution, "kernel_version": reading.Kernel,
-		"architecture": runtime.GOARCH, "python_version": "", "cpu_capacity": reading.CPUCapacity,
+		"architecture": runtime.GOARCH, "go_version": strings.TrimPrefix(runtime.Version(), "go"), "cpu_capacity": reading.CPUCapacity,
 		"service_started_at": stamp(s.options.Started), "service_uptime_seconds": max(0, int64(now.Sub(s.options.Started).Seconds())),
 		"process_cpu_percent": nil, "process_memory_bytes": nil, "process_memory_percent": memoryPercentage(reading.ProcessMemory, reading.MemoryTotal),
 		"memory_scope": reading.MemoryScope, "memory_percent": memoryPercentage(reading.MemoryUsed, reading.MemoryTotal),

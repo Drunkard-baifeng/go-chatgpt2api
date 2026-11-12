@@ -129,7 +129,7 @@ function validateRuntime(value: unknown) {
   }
   ;[
     'instance_name', 'distribution', 'kernel_version', 'architecture',
-    'python_version', 'service_started_at',
+    'go_version', 'service_started_at',
   ].forEach((field) => {
     expectString(runtime[field], `response.runtime.${field}`)
   })

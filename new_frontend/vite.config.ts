@@ -2,7 +2,7 @@ import path from 'node:path'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-const proxyTarget = process.env.VITE_DEV_API_TARGET || 'http://localhost:8099'
+const proxyTarget = process.env.VITE_DEV_API_TARGET || 'http://127.0.0.1:8100'
 const proxy = Object.fromEntries(
   ['/api', '/auth', '/version', '/images', '/image-thumbnails', '/v1', '/files']
     .map(prefix => [prefix, { target: proxyTarget, changeOrigin: true }]),

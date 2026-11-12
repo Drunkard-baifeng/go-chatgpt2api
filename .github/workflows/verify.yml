@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  backend:
-    name: Go 静态检查与双平台构建
+  build:
+    name: 控制台嵌入、静态检查与双平台构建
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,6 +23,18 @@ jobs:
     steps:
       - name: 检出源码
         uses: actions/checkout@v4
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: new_frontend/.node-version
+          cache: npm
+          cache-dependency-path: new_frontend/package-lock.json
+          registry-url: https://registry.npmjs.org
+      - name: 构建并准备控制台资源
+        working-directory: .
+        run: |
+          npm --prefix new_frontend ci --registry=https://registry.npmjs.org
+          node scripts/build.mjs --prepare
       - name: 安装 Go
         uses: actions/setup-go@v5
         with:
@@ -37,24 +49,3 @@ jobs:
         run: |
           GOOS=linux GOARCH=amd64 go build -mod=readonly -trimpath -o "$RUNNER_TEMP/chatgpt2api-linux-amd64" ./cmd/chatgpt2api
           GOOS=windows GOARCH=amd64 go build -mod=readonly -trimpath -o "$RUNNER_TEMP/chatgpt2api-windows-amd64.exe" ./cmd/chatgpt2api
-
-  frontend:
-    name: 控制台类型检查与构建
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: new_frontend
-    steps:
-      - name: 检出源码
-        uses: actions/checkout@v4
-      - name: 安装 Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: new_frontend/.node-version
-          cache: npm
-          cache-dependency-path: new_frontend/package-lock.json
-          registry-url: https://registry.npmjs.org
-      - name: 安装与构建
-        run: |
-          npm ci --registry=https://registry.npmjs.org
-          npm run build

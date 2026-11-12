@@ -16,7 +16,8 @@ services:
 
   api:
     build:
-      context: ./go_backend
+      context: .
+      dockerfile: go_backend/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy

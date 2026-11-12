@@ -1,6 +1,7 @@
 go.work
 go.work.sum
 go_backend/bin/
+/bin/
 go_backend/data/
 go_backend/*.exe
 go_backend/config.yaml

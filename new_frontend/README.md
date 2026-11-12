@@ -6,8 +6,8 @@ Status: current
 白色卡片和蓝色操作按钮。包含浅色、深色和跟随系统主题。
 
 本目录包含完整源码、接口适配器、状态仓库、业务组件和页面 runtime，
-图标与图表资源位于自己的 `src/` 和 `public/`。安装、构建和运行不读取
-Python 目录；前后端通过 HTTP 连接。实际能力子集、迁移阻塞和验证状态见 [Go 后端说明](../go_backend/README.md)，也可通过显式 HTTP 目标选择已有兼容服务。
+图标与图表资源位于自己的 `src/` 和 `public/`。生产构建将控制台编入 Go 可执行文件，
+由同一端口提供页面与 API；能力子集和验证范围见 [后端说明](../go_backend/README.md)。
 可以单独复制本目录，使用自己的 `package.json` 和锁文件安装依赖。
 
 ## 本地运行
@@ -25,7 +25,7 @@ npm --prefix new_frontend run dev
 开发地址默认为 `http://127.0.0.1:5176`，以 Vite 实际输出为准。
 使用现有管理密钥或用户密钥登录，源码不包含密钥。
 
-开发代理默认连接 `http://localhost:8099`。连接默认监听 8100 的 Go 后端时：
+开发代理默认连接 `http://127.0.0.1:8100`，其他地址可显式设置：
 
 ```powershell
 $env:VITE_DEV_API_TARGET = 'http://127.0.0.1:8100'
@@ -42,9 +42,9 @@ npm --prefix new_frontend run build
 npm --prefix new_frontend run preview
 ```
 
-构建输出为 `new_frontend/dist`；本地预览使用 4176 端口并保留同一后端代理。
-构建不会覆盖 `old_frontend/dist` 或切换后端静态页面。生产部署需要由现有反向代理
-单独托管该目录，并将上述接口路径转发到后端，参考 [Nginx 示例](../deploy/nginx-server.conf.example)。
+上述命令仅构建前端到 `new_frontend/dist`；本地预览使用 4176 端口并保留同一后端代理。
+正式打包从项目根目录执行 `node scripts/build.mjs`，自动构建前端、复制至后端内嵌资源目录并编译单文件服务。
+`node scripts/build.mjs --prepare` 只准备内嵌资源；资源目录和二进制均不纳入 Git。正式构建固定使用同源 API，运行时无需部署此目录；可选反代见 [Nginx 示例](../deploy/nginx-server.conf.example)。
 
 ## 功能范围
 

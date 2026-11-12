@@ -307,7 +307,7 @@ export interface DashboardRuntime {
   distribution: string
   kernel_version: string
   architecture: string
-  python_version: string
+  go_version: string
   cpu_capacity: number
   service_started_at: string
   service_uptime_seconds: number
