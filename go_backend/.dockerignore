@@ -1,0 +1,16 @@
+# 构建上下文只允许生产源码和嵌入资源；不发送运行数据及部署配置。
+**
+!go.mod
+!go.sum
+!cmd/
+!cmd/**
+!internal/
+!internal/**
+!ent/
+!ent/**
+!Dockerfile
+!.dockerignore
+**/*_test.go
+**/.env
+**/.env.*
+**/config.local*.yaml

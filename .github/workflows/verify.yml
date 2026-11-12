@@ -1,0 +1,60 @@
+name: 验证 Go 和控制台
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Go 静态检查与双平台构建
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go_backend
+    env:
+      GOWORK: "off"
+      CGO_ENABLED: "0"
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+      - name: 安装 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go_backend/go.mod
+          cache-dependency-path: go_backend/go.sum
+      - name: 校验依赖与静态检查
+        run: |
+          go mod download
+          go mod verify
+          go vet ./...
+      - name: 构建 Linux 与 Windows
+        run: |
+          GOOS=linux GOARCH=amd64 go build -mod=readonly -trimpath -o "$RUNNER_TEMP/chatgpt2api-linux-amd64" ./cmd/chatgpt2api
+          GOOS=windows GOARCH=amd64 go build -mod=readonly -trimpath -o "$RUNNER_TEMP/chatgpt2api-windows-amd64.exe" ./cmd/chatgpt2api
+
+  frontend:
+    name: 控制台类型检查与构建
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: new_frontend
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v4
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: new_frontend/.node-version
+          cache: npm
+          cache-dependency-path: new_frontend/package-lock.json
+          registry-url: https://registry.npmjs.org
+      - name: 安装与构建
+        run: |
+          npm ci --registry=https://registry.npmjs.org
+          npm run build

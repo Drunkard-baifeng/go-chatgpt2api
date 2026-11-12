@@ -1,0 +1,37 @@
+go.work
+go.work.sum
+go_backend/bin/
+go_backend/data/
+go_backend/*.exe
+go_backend/config.yaml
+go_backend/config.local*.yaml
+go_backend/**/*_test.go
+
+# 独立公开仓库不能依赖父目录的忽略规则。
+node_modules/
+dist/
+build/
+data/
+tests/
+test/
+.env
+.env.*
+!.env.example
+config.yaml
+config.json
+config.local*.yaml
+config.local*.json
+*.log
+*.exe
+*.db
+*.sqlite
+*.sqlite3
+*.bak
+__pycache__/
+.codex_tmp/
+.imaging.local/
+.readability.local/
+
+# Ent 生成源码使用 runtime 包名，不能套用根目录运行产物的忽略规则。
+!go_backend/ent/runtime/
+!go_backend/ent/runtime/runtime.go

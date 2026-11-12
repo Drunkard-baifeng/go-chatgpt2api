@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: chatgpt2api_go
+      POSTGRES_USER: chatgpt2api
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 中填写 PostgreSQL 密码}
+    volumes:
+      - go_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatgpt2api -d chatgpt2api_go"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./go_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8100:8100"
+    volumes:
+      - go_image_data:/app/data
+      - type: bind
+        source: ./go_backend/config.yaml
+        target: /app/config.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8100/health/ready"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    stop_grace_period: 20s
+    restart: unless-stopped
+
+volumes:
+  go_postgres_data:
+  go_image_data:

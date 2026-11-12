@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply text-foreground;
+    position: relative;
+    isolation: isolate;
+    background: var(--app-bg);
+    font-family: var(--console-font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--console-font);
+    letter-spacing: 0;
+  }
+
+  #app {
+    min-height: 100vh;
+  }
+
+
+  button:disabled,
+  input:disabled,
+  textarea:disabled,
+  select:disabled,
+  option:disabled,
+  fieldset:disabled,
+  [aria-disabled="true"],
+  [data-disabled],
+  label:has(input:disabled),
+  label:has(textarea:disabled),
+  label:has(select:disabled) {
+    cursor: not-allowed;
+  }
+
+  button:disabled *,
+  fieldset:disabled *,
+  [aria-disabled="true"] *,
+  [data-disabled] * {
+    cursor: not-allowed;
+  }
+}
+
+html {
+  font-size: 16px;
+}
+
+*,
+.scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--console-border) var(--app-bg);
+}
+
+*::-webkit-scrollbar,
+.scrollbar-slim::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track,
+.scrollbar-slim::-webkit-scrollbar-track {
+  background: var(--app-bg);
+}
+
+*::-webkit-scrollbar-thumb,
+.scrollbar-slim::-webkit-scrollbar-thumb {
+  background-color: var(--console-border);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover,
+.scrollbar-slim::-webkit-scrollbar-thumb:hover {
+  background-color: var(--console-input-border);
+}
+
+.account-status-detail-card .ui-status-body {
+  white-space: pre-line;
+  line-height: 1.6;
+}
+
+input::placeholder,
+textarea::placeholder,
+input.font-mono::placeholder,
+textarea.font-mono::placeholder,
+input.ui-input-sm::placeholder,
+input.ui-input-md::placeholder,
+textarea.ui-textarea-sm::placeholder {
+  color: hsl(var(--muted-foreground) / 0.62);
+  font-family: var(--console-font);
+  font-size: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
+  opacity: 1;
+}
+
+.ui-select-trigger {
+  display: inline-flex;
+  width: auto;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+.ui-select-trigger:hover:not(:disabled),
+.ui-select-trigger[aria-expanded="true"] {
+  border-color: hsl(var(--primary));
+}
+
+.ui-select-trigger > svg {
+  flex: 0 0 auto;
+}

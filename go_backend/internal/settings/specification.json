@@ -1,0 +1,750 @@
+{
+  "proxy_runtime.enabled": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "proxy_runtime.resource_proxy_url": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "proxy_runtime.skip_ssl_verify": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "proxy_runtime.clearance.enabled": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "proxy_runtime.clearance.mode": {
+    "default": "none",
+    "min": null,
+    "max": null,
+    "options": [
+      "none",
+      "manual",
+      "flaresolverr"
+    ],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "proxy_runtime.clearance.cf_cookies": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": true
+  },
+  "proxy_runtime.clearance.cf_clearance": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": true
+  },
+  "proxy_runtime.clearance.user_agent": {
+    "default": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "proxy_runtime.clearance.flaresolverr_url": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "proxy_runtime.clearance.timeout_sec": {
+    "default": 60,
+    "min": 1,
+    "max": null,
+    "options": [],
+    "unit": "seconds",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "proxy_runtime.clearance.refresh_interval": {
+    "default": 3600,
+    "min": 60,
+    "max": null,
+    "options": [],
+    "unit": "seconds",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "proxy_runtime.clearance.warm_up_on_start": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "base_url": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "refresh_account_interval_minute": {
+    "default": 5,
+    "min": 1,
+    "max": null,
+    "options": [],
+    "unit": "minutes",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "image_retention_hours": {
+    "default": 24,
+    "min": 1,
+    "max": null,
+    "options": [],
+    "unit": "hours",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "log_retention_hours": {
+    "default": 24,
+    "min": 1,
+    "max": null,
+    "options": [],
+    "unit": "hours",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "console_request_timeout_secs": {
+    "default": 600,
+    "min": 30,
+    "max": 3600,
+    "options": [],
+    "unit": "seconds",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "image_poll_timeout_secs": {
+    "default": 60,
+    "min": 1,
+    "max": null,
+    "options": [],
+    "unit": "seconds",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "image_stream_timeout_secs": {
+    "default": 80,
+    "min": 1,
+    "max": null,
+    "options": [],
+    "unit": "seconds",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "image_poll_initial_wait_secs": {
+    "default": 5.0,
+    "min": 0.0,
+    "max": 60.0,
+    "options": [],
+    "unit": "seconds",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "float"
+  },
+  "image_poll_interval_secs": {
+    "default": 5.0,
+    "min": 0.5,
+    "max": 60.0,
+    "options": [],
+    "unit": "seconds",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "float"
+  },
+  "image_account_concurrency": {
+    "default": 1,
+    "min": 1,
+    "max": 3,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "image_max_n": {
+    "default": 4,
+    "min": 1,
+    "max": 4,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "account_processing_concurrency": {
+    "default": 30,
+    "min": 1,
+    "max": 100,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "image_parallel_generation": {
+    "default": true,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_account_retry_enabled": {
+    "default": true,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_upscale_enabled": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_max_account_attempts": {
+    "default": 4,
+    "min": 2,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "image_remove_conversation_after_result": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_settle_enabled": {
+    "default": true,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_settle_secs": {
+    "default": 5.0,
+    "min": 0.5,
+    "max": null,
+    "options": [],
+    "unit": "seconds",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "float"
+  },
+  "gif_models": {
+    "default": [
+      "gpt-image-2.6",
+      "gpt-image-2.6-flare",
+      "gpt-image-2.6-sunburst"
+    ],
+    "min": null,
+    "max": null,
+    "options": [
+      "codex-gpt-image-2",
+      "gpt-image-2",
+      "gpt-image-2.5",
+      "gpt-image-2.5-flare",
+      "gpt-image-2.5-sunburst",
+      "gpt-image-2.6",
+      "gpt-image-2.6-flare",
+      "gpt-image-2.6-sunburst",
+      "plus-codex-gpt-image-2",
+      "pro-codex-gpt-image-2",
+      "team-codex-gpt-image-2"
+    ],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "auto_remove_invalid_accounts": {
+    "default": true,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "auto_remove_rate_limited_accounts": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "log_levels": {
+    "default": [],
+    "min": null,
+    "max": null,
+    "options": [
+      "debug",
+      "info",
+      "warning",
+      "error"
+    ],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "sensitive_words": {
+    "default": [],
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "ai_review.enabled": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "ai_review.base_url": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "ai_review.api_key": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": true
+  },
+  "ai_review.model": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "ai_review.prompt": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_storage.enabled": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_storage.mode": {
+    "default": "local",
+    "min": null,
+    "max": null,
+    "options": [
+      "local",
+      "webdav",
+      "both"
+    ],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_storage.webdav_url": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_storage.webdav_username": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_storage.webdav_password": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": true
+  },
+  "image_storage.webdav_root_path": {
+    "default": "chatgpt2api/images",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "image_storage.public_base_url": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "genbox_push.enabled": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "genbox_push.base_url": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "genbox_push.source_id": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "genbox_push.push_key": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": true
+  },
+  "genbox_push.timeout_secs": {
+    "default": 20,
+    "min": 5,
+    "max": 120,
+    "options": [],
+    "unit": "seconds",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "genbox_push.auto_push_after_studio": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.enabled": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.provider": {
+    "default": "cloudflare_r2",
+    "min": null,
+    "max": null,
+    "options": [
+      "cloudflare_r2"
+    ],
+    "unit": null,
+    "read_only": true,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.account_id": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.access_key_id": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.secret_access_key": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": true
+  },
+  "backup.bucket": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.prefix": {
+    "default": "backups",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.interval_minutes": {
+    "default": 360,
+    "min": 1,
+    "max": null,
+    "options": [],
+    "unit": "minutes",
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "backup.rotation_keep": {
+    "default": 10,
+    "min": 0,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false,
+    "kind": "integer"
+  },
+  "backup.encrypt": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.passphrase": {
+    "default": "",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": true
+  },
+  "backup.include.image_tasks": {
+    "default": true,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.include.editable_files": {
+    "default": true,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "backup.include.images": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "third_party_apps.infinite_canvas.enabled": {
+    "default": false,
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  },
+  "third_party_apps.infinite_canvas.url": {
+    "default": "https://canvas.best",
+    "min": null,
+    "max": null,
+    "options": [],
+    "unit": null,
+    "read_only": false,
+    "restart_required": false,
+    "sensitive": false
+  }
+}
