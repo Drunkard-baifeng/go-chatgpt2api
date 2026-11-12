@@ -8,6 +8,7 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 const frontend = path.join(root, 'new_frontend')
 const backend = path.join(root, 'go_backend')
 const embedded = path.join(backend, 'internal', 'app', 'console', 'dist')
+const version = `v${JSON.parse(readFileSync(path.join(frontend, 'package.json'), 'utf8')).version}`
 const args = process.argv.slice(2)
 const prepareOnly = args[0] === '--prepare' && args.length === 1
 if (args.length && !prepareOnly) {
@@ -55,7 +56,7 @@ try {
     const name = `chatgpt2api-${targetOS}-${targetArch}${targetOS === 'windows' ? '.exe' : ''}`
     const output = path.join(root, 'bin', name)
     mkdirSync(path.dirname(output), { recursive: true })
-    run('go', ['build', '-mod=readonly', '-trimpath', '-ldflags=-s -w', '-o', output, './cmd/chatgpt2api'], backend, { GOWORK: 'off', CGO_ENABLED: '0' })
+    run('go', ['build', '-mod=readonly', '-trimpath', `-ldflags=-s -w -X main.version=${version}`, '-o', output, './cmd/chatgpt2api'], backend, { GOWORK: 'off', CGO_ENABLED: '0' })
     console.log(`已生成含控制台的可执行文件：${output}`)
   }
 } catch (error) {

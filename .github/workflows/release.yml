@@ -1,0 +1,181 @@
+name: 发布程序与容器镜像
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 构建内嵌控制台与四平台下载包
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    env:
+      GOWORK: "off"
+      CGO_ENABLED: "0"
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - name: 检出发布源码
+        uses: actions/checkout@v4
+      - name: 核对标签和前端版本
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+          test "$RELEASE_TAG" = "v$(node -p "require('./new_frontend/package.json').version")"
+          test "$RELEASE_TAG" = "v$(node -p "require('./new_frontend/package-lock.json').version")"
+          test "$RELEASE_TAG" = "v$(node -p "require('./new_frontend/package-lock.json').packages[''].version")"
+          awk -v tag="$RELEASE_TAG" '
+            /^## / { if (found) exit; found = ($2 == tag); next }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          test -s "$RUNNER_TEMP/release-notes.md"
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: new_frontend/.node-version
+          cache: npm
+          cache-dependency-path: new_frontend/package-lock.json
+          registry-url: https://registry.npmjs.org
+      - name: 安装 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go_backend/go.mod
+          cache-dependency-path: go_backend/go.sum
+      - name: 构建控制台并检查后端
+        run: |
+          npm --prefix new_frontend ci --registry=https://registry.npmjs.org
+          node scripts/build.mjs --prepare
+          cd go_backend
+          go mod verify
+          go vet ./...
+      - name: 编译并打包
+        run: |
+          mkdir -p release
+          for target in linux/amd64 linux/arm64 windows/amd64 windows/arm64; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            name="go-chatgpt2api_${RELEASE_TAG}_${os}_${arch}"
+            stage="$RUNNER_TEMP/$name"
+            mkdir -p "$stage/licenses/console" "$stage/licenses/webp"
+            executable=chatgpt2api
+            if [[ "$os" == windows ]]; then executable=chatgpt2api.exe; fi
+            (cd go_backend && GOOS="$os" GOARCH="$arch" go build -mod=readonly -trimpath \
+              -ldflags="-s -w -X main.version=$RELEASE_TAG" -o "$stage/$executable" ./cmd/chatgpt2api)
+            cp go_backend/config.example.yaml "$stage/"
+            cp LICENSE NOTICE README.md CHANGELOG.md "$stage/"
+            cp new_frontend/THIRD_PARTY_NOTICES.md "$stage/licenses/console/"
+            cp go_backend/internal/images/codec/LICENSE.* go_backend/internal/images/codec/NOTICE.* "$stage/licenses/webp/"
+            if [[ "$os" == windows ]]; then
+              (cd "$stage" && zip -qr "$GITHUB_WORKSPACE/release/$name.zip" .)
+            else
+              tar -czf "release/$name.tar.gz" -C "$stage" .
+            fi
+          done
+          "$RUNNER_TEMP/go-chatgpt2api_${RELEASE_TAG}_linux_amd64/chatgpt2api" --help
+          (cd release && sha256sum *.tar.gz *.zip > SHA256SUMS)
+      - name: 保存下载包
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: release/*
+          if-no-files-found: error
+          retention-days: 7
+
+  docker:
+    name: 构建并推送双架构镜像
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: 检出发布源码
+        uses: actions/checkout@v4
+      - name: 设置镜像名称
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - name: 启用 ARM 仿真
+        uses: docker/setup-qemu-action@v3
+      - name: 配置 Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 设置镜像标签
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+      - name: 构建并推送镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: go_backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          build-args: VERSION=${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: 检查两种架构的容器入口
+        env:
+          RELEASE_IMAGE: ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+        run: |
+          docker run --rm --platform linux/amd64 "$RELEASE_IMAGE" --help
+          docker run --rm --platform linux/arm64 "$RELEASE_IMAGE" --help
+
+  publish:
+    name: 上传附件并公开 Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - name: 检出发布说明
+        uses: actions/checkout@v4
+      - name: 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+          path: release
+      - name: 发布版本
+        run: |
+          (cd release && sha256sum -c SHA256SUMS)
+          awk -v tag="$RELEASE_TAG" '
+            /^## / { if (found) exit; found = ($2 == tag); next }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          test -s "$RUNNER_TEMP/release-notes.md"
+          printf '\nDocker 镜像：`ghcr.io/%s:%s`；稳定版也可使用 `latest`。\n' \
+            "${GITHUB_REPOSITORY,,}" "$RELEASE_TAG" >> "$RUNNER_TEMP/release-notes.md"
+          if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/release.json"; then
+            jq -e '.isDraft == true' "$RUNNER_TEMP/release.json"
+            gh release upload "$RELEASE_TAG" release/* --clobber
+            gh release edit "$RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+          else
+            gh release create "$RELEASE_TAG" release/* --draft --verify-tag \
+              --title "go-chatgpt2api $RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi
+          if [[ "$RELEASE_TAG" == *-* ]]; then
+            gh release edit "$RELEASE_TAG" --draft=false --prerelease
+          else
+            gh release edit "$RELEASE_TAG" --draft=false --latest
+          fi

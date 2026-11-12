@@ -20,6 +20,19 @@ Go 服务内嵌 Vue 3 控制台，一个可执行文件同时提供网页与 API
 
 <a id="构建与部署"></a>
 
+## 下载运行
+
+在 [GitHub Releases](https://github.com/Drunkard-baifeng/go-chatgpt2api/releases) 下载对应系统和架构的压缩包。程序已经包含完整控制台，压缩包同时提供配置示例、说明和许可文件；`SHA256SUMS` 用于核对下载内容。
+
+解压后将 `config.example.yaml` 复制为 `config.yaml`，填写管理员密钥和 PostgreSQL 连接信息。Windows 新空库先迁移，再启动：
+
+```powershell
+.\chatgpt2api.exe db migrate --config .\config.yaml
+.\chatgpt2api.exe serve --config .\config.yaml
+```
+
+Linux 使用 `./chatgpt2api` 执行相同命令。浏览器打开 `http://127.0.0.1:8100`，无需单独部署前端。
+
 ## 构建与启动
 
 在仓库根目录执行：
@@ -61,16 +74,22 @@ npm --prefix new_frontend run dev
 
 ## 容器部署
 
-见 [Compose 示例](docker-compose.yml)：复制 `.env.example` 为 `.env` 并填写数据库密码，配置中使用 `server.host: 0.0.0.0`、`database.host: postgres`，凭据与 `.env` 一致。构建上下文为当前目录，镜像自动构建并嵌入控制台：
+见 [Compose 示例](docker-compose.yml)：复制 `.env.example` 为 `.env` 并填写数据库密码，配置中使用 `server.host: 0.0.0.0`、`database.host: postgres`，凭据与 `.env` 一致。发布镜像为 `ghcr.io/drunkard-baifeng/go-chatgpt2api`，提供版本标签（如 `v0.1.0`）和最新稳定版 `latest`，支持 Linux amd64/arm64，均已内嵌控制台：
 
 ```powershell
-docker compose build api
+docker compose pull
 docker compose up -d postgres
 docker compose run --rm api db migrate --config /app/config.yaml
 docker compose up -d api
 ```
 
+需要从当前源码构建时，改用 `docker compose build api`；构建上下文为项目根目录。已有数据升级时保留配置和数据卷。
+
 直接访问 8100 即可。需要 HTTPS 时可加 [Nginx 全站反代](deploy/nginx-server.conf.example)，无需上传静态目录。当前只支持单活动后端进程，备份须同时保留数据库和图片、任务、文件目录；使用数据库备份功能时还需可用的 `pg_dump`，镜像已包含客户端。
+
+## 自动发布
+
+`main` 推送自动执行构建验证。更新前端 `package.json` 与锁文件中的项目版本，并在 [更新记录](CHANGELOG.md) 添加同版本说明后，推送 `v*` 标签触发发布工作流：先构建内嵌控制台和四个平台下载包，再构建并检查双架构容器镜像，全部通过后上传附件并公开 Release。标签、程序显示版本和镜像版本保持一致；普通分支推送不创建 Release 或发布镜像。
 
 接口参数、限制及已验证范围见 [后端说明](go_backend/README.md)。许可见 [LICENSE](LICENSE)、[NOTICE](NOTICE) 和 [前端第三方声明](new_frontend/THIRD_PARTY_NOTICES.md)。
 

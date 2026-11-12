@@ -15,6 +15,7 @@ services:
     restart: unless-stopped
 
   api:
+    image: ghcr.io/drunkard-baifeng/go-chatgpt2api:latest
     build:
       context: .
       dockerfile: go_backend/Dockerfile
