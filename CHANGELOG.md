@@ -10,7 +10,7 @@ Status: current
 - [新增] Windows/Linux 的 amd64、arm64 下载包，包含配置示例、说明与许可文件，并提供 SHA-256 校验。
 - [新增] Linux amd64/arm64 的 GHCR 容器镜像，与下载包使用同一版本标签。
 - [优化] 服务启动时自动检测并初始化空数据库，复用版本迁移与结构校验，首次部署只需执行启动命令；已有数据保留，未知、无台账旧库及较新结构仍拒绝自动修改。
-- [优化] 交流与服务使用 QQ 群 1057583658，生图 API 入口为 https://jisuai.net，移除账号购买入口。
+- [优化] 交流与服务使用 QQ 群 1057583658，生图 API 入口为 [jisuai.net](https://jisuai.net)，移除账号购买入口。
 
 下载包解压后，将 `config.example.yaml` 复制为 `config.yaml`，填写管理员密钥和 PostgreSQL 连接信息，直接执行 `chatgpt2api serve --config ./config.yaml`；Windows 使用 `chatgpt2api.exe`。控制台和 API 默认位于 `http://127.0.0.1:8100`。
 
