@@ -61,6 +61,9 @@
             <strong :class="summaryValueClass(item.tone)">{{ item.value }}</strong>
           </div>
         </div>
+        <p v-if="message && !error" role="status" class="mt-3 break-words text-xs leading-5 text-muted-foreground">
+          {{ message }}
+        </p>
         <p v-if="error" role="alert" class="mt-3 break-words text-xs leading-5 text-red-600 dark:text-red-400">
           {{ error }}
         </p>
@@ -154,6 +157,7 @@ const props = withDefaults(defineProps<{
   open: boolean
   title: string
   subtitle?: string
+  message?: string
   total?: number
   current?: number
   percent?: number
@@ -170,6 +174,7 @@ const props = withDefaults(defineProps<{
   summaryItems?: OperationSummaryItem[]
 }>(), {
   subtitle: '',
+  message: '',
   total: 0,
   current: 0,
   percent: undefined,

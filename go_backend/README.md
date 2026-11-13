@@ -38,7 +38,7 @@ Status: current
 | `/api/image-storage/test`、`/api/image-storage/sync`、`/api/images/storage/compress`、`/api/images/genbox-push` | 管理员 WebDAV、压缩及 GenBox 操作 |
 | `/v1/editable-file-tasks`、`/v1/ppt/generations`、`/v1/psd/generations` | 有效身份提交、按归属查询与删除 PPT/PSD 异步任务，两个生成路径均返回任务行 |
 | `GET /files/*file_path` | 公开随机产物下载，须存在成功任务元数据；不列目录 |
-| `/api/system/update-status`、`/api/system/update-task`、`/api/system/update` | 如实返回 Go 部署升级能力；当前没有在线更新包，启动更新明确拒绝 |
+| `/api/system/update-status`、`/api/system/update-task`、`/api/system/update` | 管理员检查稳定发布、查询跨重启任务及受理在线更新；成功受理返回 202，不支持的部署方式或重复提交返回 409 |
 
 原延期清单中的路由均已移入所属处理器，不再保留统一 501 占位。路由已注册不等于完整协议兼容；下文明确输入子集、关闭的能力和外部验证缺口。未知接口和缺失静态资源返回 404，OpenAI、Messages 与控制台分别保留对应错误形状；页面路径刷新回退至控制台入口。
 
@@ -230,7 +230,17 @@ CPA/sub2api 连接、来源列表和导入进度由 `remoteimports` 持有，实
 
 清理服务启动后每 30 分钟检查保留期和账号自动移除策略，也提供管理员 dry-run 与显式执行；活动或维护中的账号不删除。日志清理后重建所需指标，域内失败如实反馈，不把部分清理伪装为全局成功。定期清理不执行远程账号检查。
 
-当前没有匹配 Go 部署的在线发布包，升级接口返回 `can_update:false`，更新命令明确拒绝；使用部署工具更新源码或镜像。只安装匹配当前平台和部署形式的程序；备用出口切换及其他扩展能力仍受各自执行边界限制。
+## 在线更新
+
+`internal/updates` 从固定公开仓库 GitHub Releases 查询稳定版；成功结果缓存 10 分钟，检查失败缓存 1 分钟，手动检查跳过缓存。只接受匹配 Windows/Linux amd64、arm64 的正式附件，校验 SHA256SUMS、发布平台提供的摘要、程序构建平台及版本；网络、权限或校验失败不会停止现用服务。开发构建显示开发状态，不查询正式版；容器和已识别的 systemd 托管实例可检查版本，使用部署工具升级。
+
+直接运行的正式下载包可以从控制台确认安装。独立助手在旧进程完成 HTTP 排空、任务关闭并真正退出后替换程序，沿用原配置绝对路径和工作目录重新启动；新进程通过自身 HTTP 就绪检查后才报告成功。新版本启动失败会恢复旧程序并尝试重启。请求受理后短暂断连会继续轮询；受理响应丢失时重新查询实际任务，不将历史成功当成本次更新结果。
+
+程序所在目录须可写且有下载、暂存和保留旧程序的空间。任务、日志和恢复文件保存在可执行文件旁的 `.<程序文件名>.update/job-<任务ID>/`，仅替换当前程序，不覆盖配置、许可或业务文件。助手交接后持续等待旧进程退出；长请求可能延迟安装。更新任务按操作系统文件锁串行执行，异常重启遗留的任务明确标记中断。
+
+持续无法重连时，先确认旧、新服务及安装助手的进程状态，检查任务目录中的 `install.log`、`service.log` 和外层 `task.json`。需要手动恢复时先停止确认属于本次更新的服务及助手，将任务目录里的 `previous.exe`（Linux 为 `previous`）复制回原程序路径，再用原 `serve --config` 命令启动；保留更新目录用于排查。恢复程序不等于数据库降级，涉及不兼容结构变更时按备份恢复流程处理。
+
+本次重新发布的 `v0.1.0` 已包含在线更新，可安装后续更高的稳定版。此前下载的旧 `v0.1.0` 包没有更新器，须手动替换一次；相同版本号不会触发在线更新。Docker 使用 `docker compose pull api` 与 `docker compose up -d api`，不从控制台替换容器内文件。当前已验证 Windows 真实进程的更新成功、校验失败、启动失败恢复、安装前失败恢复及慢退出监督，另有四平台交叉编译；Linux/ARM64 真实运行和容器升级仍需对应部署验收。备用出口切换及其他扩展能力仍受各自执行边界限制。
 
 ## 本地启动
 
@@ -243,13 +253,10 @@ if (!(Test-Path ./config.yaml)) { Copy-Item ./config.example.yaml ./config.yaml 
 仅首次创建配置，已有文件保留。编辑 `config.yaml`，填写 `auth.admin_key`、PostgreSQL 地址、数据库名、角色和密码。示例管理员密钥为空，未填写会拒绝启动。角色和 PostgreSQL 服务应事先存在；使用独立的 Go 数据库，不与其他活动服务共用数据库及文件目录。
 
 ```powershell
-go run ./cmd/chatgpt2api db status --config ./config.yaml
-go run ./cmd/chatgpt2api db migrate --config ./config.yaml
-go run ./cmd/chatgpt2api db verify --config ./config.yaml
 go run ./cmd/chatgpt2api serve --config ./config.yaml
 ```
 
-默认监听 `127.0.0.1:8100`，直接打开即可登录控制台，API 使用同一端口。配置路径必须显式提供，相对路径以调用者工作目录为基准。示例和可选字段定义分别见 [配置示例](config.example.yaml) 与 [配置实现](internal/config/config.go)。
+启动时自动检测并初始化空数据库，已有当前结构幂等复用，通过校验后才开始监听；无需先手动执行数据库命令。默认监听 `127.0.0.1:8100`，直接打开即可登录控制台，API 使用同一端口。配置路径必须显式提供，相对路径以调用者工作目录为基准。示例和可选字段定义分别见 [配置示例](config.example.yaml) 与 [配置实现](internal/config/config.go)。
 
 若启动提示“图片目录已被占用或无法加锁”，先检查是否还有旧后端进程，再检查图片目录权限。停止旧进程后由操作系统释放锁，不要删除 `writer.lock`、索引或图片来绕过独占保护。
 
@@ -267,9 +274,9 @@ go run ./cmd/chatgpt2api serve --config ./config.yaml
 | `db verify` | 只读验证已登记的受支持结构，不匹配时非零退出 |
 | `db migrate` | 允许创建确认不存在的数据库，显式初始化空库；已迁移时幂等 |
 | `db adopt --offline` | 仅为完整匹配的既有 PostgreSQL 结构登记版本台账，不执行建表基线或改写业务记录 |
-| `serve` | 允许创建确认不存在的数据库，但缺少结构、缺少接管台账或结构不匹配时拒绝启动 |
+| `serve` | 自动检测数据库，创建确认不存在的数据库并复用 goose 初始化空库；已登记的当前结构幂等复用，校验成功后监听 |
 
-创建目标库需要访问维护库及 `CREATEDB` 权限；已有数据库不会被删除、替换或重新指定所有者。空库仍必须执行 `db migrate`，服务不会隐式建表。Ent 和 pgx 共用同一个有界连接池，不调用 Ent 自动迁移。
+创建目标库需要访问维护库及 `CREATEDB` 权限；已有数据库不会被删除、替换或重新指定所有者。普通启动与 `db migrate` 使用同一内嵌 SQL 版本迁移和 PostgreSQL 会话锁，初始化或校验失败时拒绝启动。无台账的既有结构仍需显式离线接管，未知或更高版本结构不会自动修改。Ent 和 pgx 共用同一个有界连接池，不调用 Ent 自动迁移。
 
 基线覆盖现有 17 张领域表。结构验证包含列、类型、空值、默认值、主外键、索引、触发器、视图、行策略及序列定义；接管还检查必要修订行、TEXT JSON 对象和自增 ID 序列位置。保留完整长 AT、摘要唯一索引、RT 和未知 JSON 字段。未知结构、字段漂移或更高版本均拒绝，不自动修复或降级。
 
@@ -291,7 +298,7 @@ go run ./cmd/chatgpt2api db verify --config ./config.yaml
 
 参考图和签名图片字节由 [资产传输模块](internal/assettransfer/transfer.go) 使用标准 HTTP 客户端单独传输，不携带账号认证或 Cookie。现有指纹库没有约束实际拨号 IP 的策略接口，因此外部图片传输将每一跳 DNS 结果全部校验为公网，再把选定 IP 固定到实际直连、CONNECT 或 SOCKS 目标，保留原 Host 和 TLS SNI。最多 3 次重定向，不允许 HTTPS 降级；上传不跟随重定向，也不自动重试。PUT 总预算及响应头预算为 120 秒，GET 为 60 秒，均服从整批截止，单图最多 50 MiB，不接收 HTML。沿用所选账号的显式代理，不读取环境代理；配置代理时只接受 HTTPS 图片目标，HTTP 图片地址明确失败。受信代理路径、TLS/SNI、重定向拒绝和取消已有隔离测试；外部资产的 HTTPS/SOCKS 代理成功路径及真实 CDN 尚未实测。
 
-本地 TLS 联调可在仓库根目录创建被忽略的 `go.work` 并加入本地模块。正式构建使用固定发布依赖和 `GOWORK=off`，不依赖本机 TLS 源码路径。
+本地 TLS 联调可在项目根目录创建被忽略的 `go.work` 并加入本地模块。正式构建使用固定发布依赖和 `GOWORK=off`，不依赖本机 TLS 源码路径。
 
 ## 图片耗时与超时排查
 

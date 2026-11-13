@@ -129,17 +129,18 @@ export const versionApi = {
   async check(force = false): Promise<VersionCheckResponse> {
     const payload = await apiClient.get<never, unknown>('/api/system/update-status', {
       params: force ? { force: true } : undefined,
+      timeout: 20_000,
     })
     return parseVersionCheckResponse(payload)
   },
 
   async updateTask(): Promise<UpdateTaskResponse> {
-    const payload = await apiClient.get<never, unknown>('/api/system/update-task')
+    const payload = await apiClient.get<never, unknown>('/api/system/update-task', { timeout: 5_000 })
     return parseUpdateTaskResponse(payload)
   },
 
   async startUpdate(): Promise<UpdateTaskResponse> {
-    const payload = await apiClient.post<never, unknown>('/api/system/update')
+    const payload = await apiClient.post<never, unknown>('/api/system/update', undefined, { timeout: 10_000 })
     return parseUpdateTaskResponse(payload)
   },
 }

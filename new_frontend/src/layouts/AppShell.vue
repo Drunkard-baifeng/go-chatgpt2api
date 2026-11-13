@@ -489,6 +489,7 @@
       :total="updateProgressState.total"
       :current="updateProgressState.current"
       :status-label="updateProgressState.statusLabel"
+      :message="updateProgressState.message"
       :error="updateProgressState.error"
       :busy="updateProgressState.busy"
       :close-disabled="updateProgressState.busy"
@@ -798,21 +799,15 @@ type HeaderServiceItem = {
 const headerServiceItems: HeaderServiceItem[] = [
   {
     key: 'service-qq',
-    label: 'QQ 交流群：1005859624',
-    href: 'https://qm.qq.com/q/yegwCqJisS',
+    label: 'QQ 交流群：1057583658',
+    href: 'https://qm.qq.com/cgi-bin/qm/qr?group_code=1057583658',
     icon: 'lucide:messages-square',
-  },
-  {
-    key: 'service-account',
-    label: '购买生图账号',
-    href: 'https://pay.ldxp.cn/shop/yukkcat',
-    icon: 'lucide:shopping-bag',
   },
   {
     key: 'service-api',
     label: '生图 API',
-    detail: '小量 ¥0.02/张 · 中转 ¥0.01/张 · 大量/企业 ¥0.009/张',
-    href: 'https://api.klong.lat',
+    detail: 'jisuai.net',
+    href: 'https://jisuai.net',
     icon: 'lucide:badge-dollar-sign',
   },
 ]
@@ -837,12 +832,18 @@ const routeProgressDelayMs = 140
 const routeProgressFinishMs = 140
 let routeProgressDelayTimer: number | null = null
 let routeProgressFinishTimer: number | null = null
-const defaultReleasePageUrl = 'https://github.com/yukkcat/chatgpt2api/releases'
+const defaultReleasePageUrl = 'https://github.com/Drunkard-baifeng/go-chatgpt2api/releases'
 const releasePageUrl = computed(() => updateStatus.value?.release_url || defaultReleasePageUrl)
 const updateCheckingMessage = '正在检查云端版本...'
 const updateTaskPollIntervalMs = 1000
 let updateTaskPollTimer: number | null = null
 let updateReloadScheduled = false
+let updateReloadTimer: number | null = null
+let isUpdateTaskPolling = false
+let isUpdateSubmitting = false
+let unconfirmedUpdatePreviousId: string | null = null
+let updateDisposed = false
+let updatePollRevision = 0
 const routeViewLoaders: Record<string, () => Promise<unknown>> = {
   '/': () => import('~/views/Dashboard.vue'),
   '/accounts': () => import('~/views/Accounts.vue'),
@@ -1064,13 +1065,14 @@ function applyUpdateTask(task: UpdateTaskResponse, open: boolean) {
 
 function scheduleUpdateTaskPoll() {
   clearUpdateTaskPollTimer()
+  if (updateDisposed || document.hidden || !authStore.isAdmin) return
   updateTaskPollTimer = window.setTimeout(() => {
     void pollUpdateTask()
   }, updateTaskPollIntervalMs)
 }
 
 async function startUpdate() {
-  if (isUpdateConfirming.value || !canStartUpdate.value) return
+  if (isUpdateSubmitting || isUpdateConfirming.value || !canStartUpdate.value) return
   const targetTag = normalizeVersionTag(updateStatus.value?.latest_tag || '')
   if (!targetTag) return
 
@@ -1079,7 +1081,7 @@ async function startUpdate() {
   try {
     confirmed = await confirmDialog.ask({
       title: '确认更新',
-      message: `检测到新版本 ${targetTag}，当前版本为 ${currentVersionLabel.value || '版本未知'}。确认后将下载并安装更新，服务会自动重启，通常需要 30 秒至 2 分钟。`,
+      message: `检测到新版本 ${targetTag}，当前版本为 ${currentVersionLabel.value || '版本未知'}。确认后将下载并校验更新，安装时服务会自动重启，页面会重新连接。配置和数据将保留；新版本启动失败时会尝试恢复旧程序。`,
       confirmText: '立即更新',
       cancelText: '取消',
     })
@@ -1089,33 +1091,74 @@ async function startUpdate() {
   if (!confirmed) return
 
   clearUpdateTaskPollTimer()
+  updatePollRevision += 1
   updateTargetTag.value = targetTag
   isUpdateDialogOpen.value = false
 
+  isUpdateSubmitting = true
+  await updateProgressRuntime.start({ title: '正在提交更新', subtitle: `目标版本 ${targetTag}`, total: 6, message: '正在向服务提交更新请求，请稍候。' })
+  let submitted = false
   try {
+    const previous = await versionApi.updateTask()
+    if (previous.busy) {
+      setStringPreference(preferenceKeys.updateActiveTaskId, previous.task_id)
+      applyUpdateTask(previous, true)
+      scheduleUpdateTaskPoll()
+      return
+    }
+    unconfirmedUpdatePreviousId = previous.task_id
+    submitted = true
     const task = await versionApi.startUpdate()
+    unconfirmedUpdatePreviousId = null
     setStringPreference(preferenceKeys.updateActiveTaskId, task.task_id)
     applyUpdateTask(task, true)
     if (task.busy) scheduleUpdateTaskPoll()
     else await checkForUpdates(false)
   } catch (error) {
     const message = error instanceof Error ? error.message : '在线更新失败，请稍后重试。'
-    toast.error(message)
+    if (submitted) {
+      updateProgressState.message = `尚未确认请求是否受理：${message}。正在查询服务中的实际更新任务，请勿重复提交。`
+      scheduleUpdateTaskPoll()
+    } else {
+      unconfirmedUpdatePreviousId = null
+      updateProgressRuntime.fail(`未提交更新：${message}。请检查网络后重试。`)
+    }
+  } finally {
+    isUpdateSubmitting = false
   }
 }
 
 async function pollUpdateTask() {
+  if (updateDisposed || document.hidden || !authStore.isAdmin) return
+  if (isUpdateTaskPolling || isUpdateSubmitting) {
+    if (updateProgressState.busy) scheduleUpdateTaskPoll()
+    return
+  }
+  isUpdateTaskPolling = true
+  const revision = updatePollRevision
   try {
     const task = await versionApi.updateTask()
+    if (updateDisposed || revision !== updatePollRevision) return
+    if (unconfirmedUpdatePreviousId !== null && !task.busy && (task.state === 'idle' || task.task_id === unconfirmedUpdatePreviousId)) {
+      unconfirmedUpdatePreviousId = null
+      updateProgressRuntime.fail('服务中未发现本次提交的新任务，请检查网络后重新提交。')
+      clearUpdateTaskPollTimer()
+      return
+    }
+    unconfirmedUpdatePreviousId = null
     const activeTaskId = getStringPreference(preferenceKeys.updateActiveTaskId)
-    const shouldOpen = task.busy || Boolean(task.task_id && task.task_id === activeTaskId)
+    const shouldOpen = updateProgressState.open || task.busy || Boolean(task.task_id && task.task_id === activeTaskId)
+    if (task.state === 'idle' && updateProgressState.busy) {
+      updateProgressRuntime.fail('服务未记录到已受理的更新任务，请检查网络后重新提交。')
+    }
+    if (task.busy && task.task_id) setStringPreference(preferenceKeys.updateActiveTaskId, task.task_id)
     applyUpdateTask(task, shouldOpen)
     if (task.busy) {
-      scheduleUpdateTaskPoll()
       return
     }
     clearUpdateTaskPollTimer()
     await checkForUpdates(false)
+    if (updateDisposed || revision !== updatePollRevision) return
     const targetTag = normalizeVersionTag(task.latest_tag)
     if (
       !updateReloadScheduled
@@ -1124,11 +1167,22 @@ async function pollUpdateTask() {
       && normalizeVersionTag(localVersion) !== targetTag
     ) {
       updateReloadScheduled = true
-      window.setTimeout(() => window.location.reload(), 400)
+      updateReloadTimer = window.setTimeout(() => window.location.reload(), 400)
     }
   } catch {
+    if (updateDisposed || revision !== updatePollRevision) return
+    if (updateProgressState.busy) {
+      updateProgressState.message = '暂时无法连接服务，正在重新连接。请勿重复提交更新；持续无法连接时请检查服务日志。'
+    }
+  } finally {
+    isUpdateTaskPolling = false
     if (updateProgressState.busy) scheduleUpdateTaskPoll()
   }
+}
+
+function handleUpdateVisibilityChange() {
+  if (document.hidden) clearUpdateTaskPollTimer()
+  else if (authStore.isAdmin) void pollUpdateTask()
 }
 
 function closeUpdateProgress() {
@@ -1277,6 +1331,7 @@ onMounted(() => {
   setupViewportListener()
   window.addEventListener(PUBLIC_SETTINGS_CHANGED_EVENT, handlePublicSettingsChanged)
   window.addEventListener('keydown', handleWindowKeydown)
+  document.addEventListener('visibilitychange', handleUpdateVisibilityChange)
   void loadCurrentVersion()
   if (authStore.isAdmin) {
     void checkForUpdates(false, true)
@@ -1286,8 +1341,11 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  updateDisposed = true
+  if (updateReloadTimer !== null) window.clearTimeout(updateReloadTimer)
   window.removeEventListener(PUBLIC_SETTINGS_CHANGED_EVENT, handlePublicSettingsChanged)
   window.removeEventListener('keydown', handleWindowKeydown)
+  document.removeEventListener('visibilitychange', handleUpdateVisibilityChange)
   systemThemeMedia?.removeEventListener('change', handleSystemThemeChange)
   systemThemeMedia = null
   teardownViewportListener()

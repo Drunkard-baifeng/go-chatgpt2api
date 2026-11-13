@@ -1,8 +1,9 @@
 package app
 
 import (
-	"github.com/gin-gonic/gin"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 func registerUpdateRoutes(router *gin.Engine, options Options) {
@@ -37,6 +38,6 @@ func registerUpdateRoutes(router *gin.Engine, options Options) {
 			writeError(c, 409, "conflict_error", err.Error())
 			return
 		}
-		writeError(c, 409, "conflict_error", "当前部署不支持在线更新")
+		c.JSON(202, options.Updates.Task())
 	})
 }

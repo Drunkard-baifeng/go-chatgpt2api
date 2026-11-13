@@ -77,6 +77,7 @@ jobs:
             fi
           done
           "$RUNNER_TEMP/go-chatgpt2api_${RELEASE_TAG}_linux_amd64/chatgpt2api" --help
+          test "$("$RUNNER_TEMP/go-chatgpt2api_${RELEASE_TAG}_linux_amd64/chatgpt2api" --version)" = "$RELEASE_TAG"
           (cd release && sha256sum *.tar.gz *.zip > SHA256SUMS)
       - name: 保存下载包
         uses: actions/upload-artifact@v4
@@ -133,9 +134,12 @@ jobs:
       - name: 检查两种架构的容器入口
         env:
           RELEASE_IMAGE: ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           docker run --rm --platform linux/amd64 "$RELEASE_IMAGE" --help
           docker run --rm --platform linux/arm64 "$RELEASE_IMAGE" --help
+          test "$(docker run --rm --platform linux/amd64 "$RELEASE_IMAGE" --version)" = "$RELEASE_TAG"
+          test "$(docker run --rm --platform linux/arm64 "$RELEASE_IMAGE" --version)" = "$RELEASE_TAG"
 
   publish:
     name: 上传附件并公开 Release

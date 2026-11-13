@@ -104,15 +104,41 @@ func parseArguments(args []string, help io.Writer) (arguments, error) {
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	args := os.Args[1:]
+	if len(args) == 1 && args[0] == "--version" {
+		fmt.Fprintln(os.Stdout, version)
+		return
+	}
+	if len(args) == 2 && args[0] == "--internal-update" {
+		if err := updates.Apply(args[1], version); err != nil {
+			logger.Error("更新安装失败", "error", err.Error())
+			os.Exit(1)
+		}
+		return
+	}
+	var ready func() error
+	if len(args) >= 2 && args[0] == "--internal-update-child" {
+		var err error
+		ready, err = updates.ReadyCallback(args[1], version)
+		if err != nil {
+			logger.Error("更新启动失败", "error", err.Error())
+			os.Exit(1)
+		}
+		args = args[2:]
+	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	if err := run(ctx, os.Args[1:], os.Stdout, os.Stderr, logger); err != nil && !errors.Is(err, flag.ErrHelp) {
+	if err := runReady(ctx, args, os.Stdout, os.Stderr, logger, ready); err != nil && !errors.Is(err, flag.ErrHelp) {
 		logger.Error("程序退出", "error", err.Error())
 		os.Exit(1)
 	}
 }
 
 func run(ctx context.Context, args []string, output, help io.Writer, logger *slog.Logger) error {
+	return runReady(ctx, args, output, help, logger, nil)
+}
+
+func runReady(ctx context.Context, args []string, output, help io.Writer, logger *slog.Logger, ready func() error) error {
 	arguments, err := parseArguments(args, help)
 	if err != nil {
 		return err
@@ -121,7 +147,13 @@ func run(ctx context.Context, args []string, output, help io.Writer, logger *slo
 	if err != nil {
 		return err
 	}
+	var updateService *updates.Service
 	if arguments.command == "serve" {
+		var cancelServe context.CancelFunc
+		ctx, cancelServe = context.WithCancel(ctx)
+		defer cancelServe()
+		updateService = updates.New(version, updates.Options{Context: ctx, ConfigPath: arguments.configPath, Restart: cancelServe})
+		defer updateService.Close()
 		// 离线验证 TLS 配置；数据库命令不构造传输资源。
 		probe, err := upstream.NewSession(cfg.Upstream, "")
 		if err != nil {
@@ -157,7 +189,8 @@ func run(ctx context.Context, args []string, output, help io.Writer, logger *slo
 		}
 		return json.NewEncoder(output).Encode(map[string]string{"status": "ok"})
 	}
-	if err := db.Verify(operation); err != nil {
+	logger.Info("检查并初始化数据库")
+	if err := db.Migrate(operation); err != nil {
 		return safeDatabaseError(err)
 	}
 	stop()
@@ -223,7 +256,7 @@ func run(ctx context.Context, args []string, output, help io.Writer, logger *slo
 		return err
 	}
 	settingsService.ConfigureExecution(settings.ExecutionCapabilities{Backup: true, WebDAV: true, RetentionCleanup: true, BackgroundAccountChecks: true})
-	router, err := app.NewRouter(app.Options{Auth: identity, Keys: auth.NewKeys(db.SQL, budget, identity), Settings: settingsService, Proxy: proxyService, Accounts: accountRepository, Text: textService, Images: imageService, Tasks: tasks, Assets: assets, Prompts: promptService, Observability: observabilityService, RemoteImports: remoteImportService, Backup: backupService, EditableFiles: files, Cleanup: cleanupService, Updates: updates.New(version), Version: version, Config: cfg.Server, Logger: logger, Ready: db.SQL.PingContext})
+	router, err := app.NewRouter(app.Options{Auth: identity, Keys: auth.NewKeys(db.SQL, budget, identity), Settings: settingsService, Proxy: proxyService, Accounts: accountRepository, Text: textService, Images: imageService, Tasks: tasks, Assets: assets, Prompts: promptService, Observability: observabilityService, RemoteImports: remoteImportService, Backup: backupService, EditableFiles: files, Cleanup: cleanupService, Updates: updateService, Version: version, Config: cfg.Server, Logger: logger, Ready: db.SQL.PingContext})
 	if err != nil {
 		return err
 	}
@@ -233,7 +266,7 @@ func run(ctx context.Context, args []string, output, help io.Writer, logger *slo
 	}
 	defer listener.Close()
 	logger.Info("Go 基础服务启动", "version", version, "address", listener.Addr().String())
-	return serveHTTP(ctx, listener, router, cfg.Server, logger)
+	return serveHTTP(ctx, listener, router, cfg.Server, logger, ready)
 }
 
 func closeCleanup(service *cleanup.Service, logger *slog.Logger) {
@@ -272,7 +305,7 @@ func safeDatabaseError(err error) error {
 	return errors.New("数据库操作失败，请检查结构、权限和连接状态")
 }
 
-func serveHTTP(ctx context.Context, listener net.Listener, handler http.Handler, cfg config.Server, logger *slog.Logger) error {
+func serveHTTP(ctx context.Context, listener net.Listener, handler http.Handler, cfg config.Server, logger *slog.Logger, ready ...func() error) error {
 	requests, cancelRequests := context.WithCancel(context.Background())
 	defer cancelRequests()
 	server := &http.Server{
@@ -286,6 +319,13 @@ func serveHTTP(ctx context.Context, listener net.Listener, handler http.Handler,
 	}
 	result := make(chan error, 1)
 	go func() { result <- server.Serve(listener) }()
+	if len(ready) != 0 && ready[0] != nil {
+		if err := confirmHTTPReady(ctx, listener.Addr(), ready[0]); err != nil {
+			server.Close()
+			<-result
+			return err
+		}
+	}
 	select {
 	case err := <-result:
 		server.Close()
@@ -306,5 +346,44 @@ func serveHTTP(ctx context.Context, listener net.Listener, handler http.Handler,
 			return errors.New("HTTP 请求排空超时，已取消活动请求")
 		}
 		return nil
+	}
+}
+
+func confirmHTTPReady(parent context.Context, address net.Addr, ready func() error) error {
+	endpoint, ok := address.(*net.TCPAddr)
+	if !ok {
+		return errors.New("无法确认 HTTP 监听地址")
+	}
+	host := endpoint.IP.String()
+	if endpoint.IP.IsUnspecified() {
+		host = "::1"
+		if endpoint.IP.To4() != nil {
+			host = "127.0.0.1"
+		}
+	}
+	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
+	defer cancel()
+	transport := &http.Transport{Proxy: nil, DisableKeepAlives: true}
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Transport: transport, Timeout: 3 * time.Second}
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+net.JoinHostPort(host, strconv.Itoa(endpoint.Port))+"/health/ready", nil)
+		if err != nil {
+			return errors.New("无法构造 HTTP 就绪检查")
+		}
+		response, err := client.Do(request)
+		if err == nil {
+			response.Body.Close()
+			if response.StatusCode == http.StatusOK {
+				return ready()
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return errors.New("更新后 HTTP 服务未通过就绪检查")
+		case <-ticker.C:
+		}
 	}
 }

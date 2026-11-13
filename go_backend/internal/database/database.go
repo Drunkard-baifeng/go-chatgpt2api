@@ -1,4 +1,4 @@
-// Package database 组装唯一连接池；只在显式命令中修改结构。
+// Package database 组装唯一连接池；启动与显式迁移共用受控版本迁移。
 package database
 
 import (

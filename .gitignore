@@ -3,6 +3,9 @@ go.work.sum
 go_backend/bin/
 /bin/
 /release/
+
+# 在线更新任务、下载包与程序恢复材料。
+.*.update/
 go_backend/data/
 go_backend/*.exe
 go_backend/config.yaml

@@ -6,9 +6,12 @@ Status: current
 
 - [新增] 首次发布独立 Go 服务，提供文本对话、图片生成与编辑、账号、代理、用户密钥、图库、日志和实时监控。
 - [新增] 控制台完整内嵌于可执行文件，网页与 API 共用监听端口，图片放大使用纯 Go 实现。
+- [新增] 控制台在线更新：正式 Windows/Linux amd64、arm64 下载包支持检查稳定发布、下载与 SHA256/平台校验、独立助手重启及启动失败恢复；保留配置和数据，断连继续追踪任务。
 - [新增] Windows/Linux 的 amd64、arm64 下载包，包含配置示例、说明与许可文件，并提供 SHA-256 校验。
 - [新增] Linux amd64/arm64 的 GHCR 容器镜像，与下载包使用同一版本标签。
+- [优化] 服务启动时自动检测并初始化空数据库，复用版本迁移与结构校验，首次部署只需执行启动命令；已有数据保留，未知、无台账旧库及较新结构仍拒绝自动修改。
+- [优化] 交流与服务使用 QQ 群 1057583658，生图 API 入口为 https://jisuai.net，移除账号购买入口。
 
-下载包解压后，将 `config.example.yaml` 复制为 `config.yaml`，填写管理员密钥和 PostgreSQL 连接信息。新空库先执行 `chatgpt2api db migrate --config ./config.yaml`，再执行 `chatgpt2api serve --config ./config.yaml`；Windows 使用 `chatgpt2api.exe`。控制台和 API 默认位于 `http://127.0.0.1:8100`。
+下载包解压后，将 `config.example.yaml` 复制为 `config.yaml`，填写管理员密钥和 PostgreSQL 连接信息，直接执行 `chatgpt2api serve --config ./config.yaml`；Windows 使用 `chatgpt2api.exe`。控制台和 API 默认位于 `http://127.0.0.1:8100`。
 
-当前只支持单活动服务进程。真实外部集成和生产切换的验证范围见后端说明；本次发布不提供在线自动升级。
+本次重新发布 v0.1.0，已包含在线更新，后续更高的稳定版可在控制台安装。此前下载的旧 v0.1.0 包须手动替换一次；版本号相同不会触发在线更新。Docker 使用 `docker compose pull api` 后执行 `docker compose up -d api`。当前只支持单活动服务进程，外部集成与生产切换的验证范围见后端说明。
