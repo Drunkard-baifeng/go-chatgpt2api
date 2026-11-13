@@ -2,8 +2,59 @@
 services:
   api:
     image: ghcr.io/drunkard-baifeng/go-chatgpt2api:latest
-    env_file:
-      - .env
+    # 1Panel 在页面下方填写环境变量；命令行部署可使用同目录的 .env。
+    # 显式传入容器，避免首次保存时依赖尚不存在的 env_file 文件。
+    environment:
+      # 管理员登录密钥：必须修改为你自己的长随机字符串。
+      ADMIN_KEY: "${ADMIN_KEY:-}"
+
+      # PostgreSQL 连接。数据库需要单独部署，默认连接本机 5432 端口。
+      DB_HOST: "${DB_HOST:-127.0.0.1}"
+      DB_PORT: "${DB_PORT:-5432}"
+      DB_NAME: "${DB_NAME:-chatgpt2api_go}"
+      DB_USER: "${DB_USER:-chatgpt2api}"
+      # 数据库密码：必须填写；不要把真实密码提交到 Git。
+      DB_PASSWORD: "${DB_PASSWORD:-}"
+      # 本机或内网数据库通常使用 disable；启用 TLS 时改为 require / verify-full。
+      DB_SSLMODE: "${DB_SSLMODE:-disable}"
+
+      # HTTP 服务。默认仅监听本机，交给 Nginx / OpenResty 反向代理。
+      SERVER_HOST: "${SERVER_HOST:-127.0.0.1}"
+      SERVER_PORT: "${SERVER_PORT:-8100}"
+      # 同源访问留空；多个完整来源用逗号分隔。
+      SERVER_ALLOWED_ORIGINS: "${SERVER_ALLOWED_ORIGINS:-}"
+      # 默认信任本机和私网反向代理；公网代理请改为实际 IP / CIDR，显式留空则忽略转发头。
+      SERVER_TRUSTED_PROXIES: "${SERVER_TRUSTED_PROXIES-127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}"
+      SERVER_READ_HEADER_TIMEOUT_SECONDS: "${SERVER_READ_HEADER_TIMEOUT_SECONDS:-10}"
+      SERVER_IDLE_TIMEOUT_SECONDS: "${SERVER_IDLE_TIMEOUT_SECONDS:-120}"
+      SERVER_SHUTDOWN_TIMEOUT_SECONDS: "${SERVER_SHUTDOWN_TIMEOUT_SECONDS:-15}"
+
+      # 数据库连接池和操作超时。
+      DB_CONNECT_TIMEOUT_SECONDS: "${DB_CONNECT_TIMEOUT_SECONDS:-10}"
+      DB_OPERATION_TIMEOUT_SECONDS: "${DB_OPERATION_TIMEOUT_SECONDS:-30}"
+      DB_MAX_OPEN_CONNECTIONS: "${DB_MAX_OPEN_CONNECTIONS:-30}"
+      DB_MAX_IDLE_CONNECTIONS: "${DB_MAX_IDLE_CONNECTIONS:-10}"
+      DB_CONNECTION_MAX_LIFETIME_SECONDS: "${DB_CONNECTION_MAX_LIFETIME_SECONDS:-3600}"
+
+      # 上游请求参数。通常保持默认值；超时单位为秒。
+      UPSTREAM_ACCOUNT_ID: "${UPSTREAM_ACCOUNT_ID:-}"
+      UPSTREAM_TEXT_TIMEOUT_SECONDS: "${UPSTREAM_TEXT_TIMEOUT_SECONDS:-300}"
+      UPSTREAM_PROFILE: "${UPSTREAM_PROFILE:-chrome_146}"
+      UPSTREAM_TOTAL_TIMEOUT_SECONDS: "${UPSTREAM_TOTAL_TIMEOUT_SECONDS:-170}"
+      UPSTREAM_HEADER_TIMEOUT_SECONDS: "${UPSTREAM_HEADER_TIMEOUT_SECONDS:-30}"
+      UPSTREAM_READ_IDLE_TIMEOUT_SECONDS: "${UPSTREAM_READ_IDLE_TIMEOUT_SECONDS:-30}"
+      UPSTREAM_MAX_RESPONSE_BYTES: "${UPSTREAM_MAX_RESPONSE_BYTES:-16777216}"
+      UPSTREAM_IMAGE_STREAM_SECONDS: "${UPSTREAM_IMAGE_STREAM_SECONDS:-80}"
+      UPSTREAM_IMAGE_POLL_SECONDS: "${UPSTREAM_IMAGE_POLL_SECONDS:-60}"
+
+      # 图片、任务和可编辑文件目录。容器内相对 /app 解析，并由命名卷保存图片数据。
+      IMAGES_DIRECTORY: "${IMAGES_DIRECTORY:-data/images}"
+      IMAGE_TASKS_DIRECTORY: "${IMAGE_TASKS_DIRECTORY:-data/image_tasks}"
+      IMAGE_TASKS_WORKERS: "${IMAGE_TASKS_WORKERS:-4}"
+      IMAGE_TASKS_QUEUE: "${IMAGE_TASKS_QUEUE:-32}"
+      EDITABLE_FILES_DIRECTORY: "${EDITABLE_FILES_DIRECTORY:-data/files}"
+      EDITABLE_FILES_WORKERS: "${EDITABLE_FILES_WORKERS:-2}"
+      EDITABLE_FILES_QUEUE: "${EDITABLE_FILES_QUEUE:-16}"
     network_mode: host
     volumes:
       - go_image_data:/app/data

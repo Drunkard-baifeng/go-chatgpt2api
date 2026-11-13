@@ -52,17 +52,33 @@ DB_SSLMODE=disable
 
 PostgreSQL 请自行部署；[编排文件](docker-compose.yml) 只启动应用，不包含数据库。Linux / 1Panel 使用宿主机网络，`DB_HOST=127.0.0.1` 和 `DB_PORT` 填独立数据库映射到宿主机的端口，无需配置容器间网络。不要使用应用自己的数据卷保存数据库文件。
 
-在 1Panel 的“容器 → 编排”创建编排，将本项目 `docker-compose.yml` 与填写好的 `.env` 放在同一个编排目录后部署；也可在服务器目录执行：
+在 1Panel 的“容器 → 编排”中创建编排，选择“编辑”方式（直接填写编排内容），粘贴[编排文件](docker-compose.yml)。在页面下方的“环境变量”框中填写以下内容，再保存并启动，**无需手动创建 `.env` 文件**：
+
+```dotenv
+ADMIN_KEY='填写随机管理员密钥'
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_NAME=chatgpt2api_go
+DB_USER=chatgpt2api
+DB_PASSWORD='填写数据库密码'
+DB_SSLMODE=disable
+SERVER_HOST=127.0.0.1
+SERVER_PORT=8100
+```
+
+`DB_PORT` 填数据库映射到宿主机的实际端口；更多可选变量见[配置模板](.env.example)。编排通过 `environment` 将这些变量传入容器。若保存时报 `env file ... .env not found`，说明仍在使用含 `env_file: .env` 的旧编排，替换为当前编排文件后重新保存即可。
+
+在服务器命令行部署时，将 `.env` 与编排文件放在同一目录，再执行：
 
 ```sh
 docker compose up -d
 ```
 
-使用发布镜像 `ghcr.io/drunkard-baifeng/go-chatgpt2api:latest`，也可改为指定版本标签。镜像包含完整控制台，支持 Linux amd64/arm64，业务数据保存到 `/app/data` 命名卷。`.env` 通过 `env_file` 注入，无需挂载配置文件。
+使用发布镜像 `ghcr.io/drunkard-baifeng/go-chatgpt2api:latest`，也可改为指定版本标签。镜像包含完整控制台，支持 Linux amd64/arm64，业务数据保存到 `/app/data` 命名卷，无需挂载配置文件。
 
 默认只监听回环地址，1Panel 反向代理至 `http://127.0.0.1:8100` 即可。需要从外部直接访问端口时，设置 `SERVER_HOST=0.0.0.0`；宿主机网络下无需再写 `ports`。若数据库或反向代理在独立容器中，数据库须提供宿主机可连接的端口，反向代理目标须是其可达的宿主机地址。
 
-更新镜像执行 `docker compose pull api` 和 `docker compose up -d api`。修改 `.env` 后也需执行 `up -d` 重建容器使变量生效。不要删除业务数据卷。
+更新镜像执行 `docker compose pull api` 和 `docker compose up -d api`。在 1Panel 修改环境变量后保存并重建容器；命令行修改 `.env` 后也需执行 `up -d` 重建容器使变量生效。不要删除业务数据卷。
 
 ## Nginx 反向代理
 
