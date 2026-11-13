@@ -95,7 +95,7 @@ func registerTextRoutes(router *gin.Engine, options Options) {
 		response.request = request
 		defer response.controller.SetWriteDeadline(time.Time{})
 		if protocol.Image != nil {
-			protocol.Image.BaseURL = imageRequestBaseURL(c.Request)
+			protocol.Image.BaseURL = imageRequestBaseURL(c.Request, options.Config.TrustedProxies...)
 			if options.Images == nil {
 				writeImageError(c, images.PublicError(images.ErrUnavailable))
 				return

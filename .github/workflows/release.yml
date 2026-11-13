@@ -66,7 +66,7 @@ jobs:
             if [[ "$os" == windows ]]; then executable=chatgpt2api.exe; fi
             (cd go_backend && GOOS="$os" GOARCH="$arch" go build -mod=readonly -trimpath \
               -ldflags="-s -w -X main.version=$RELEASE_TAG" -o "$stage/$executable" ./cmd/chatgpt2api)
-            cp go_backend/config.example.yaml "$stage/"
+            cp .env.example "$stage/"
             cp LICENSE NOTICE README.md CHANGELOG.md "$stage/"
             cp new_frontend/THIRD_PARTY_NOTICES.md "$stage/licenses/console/"
             cp go_backend/internal/images/codec/LICENSE.* go_backend/internal/images/codec/NOTICE.* "$stage/licenses/webp/"

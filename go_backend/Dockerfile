@@ -29,4 +29,4 @@ COPY new_frontend/THIRD_PARTY_NOTICES.md /app/licenses/console/
 USER 10001:10001
 EXPOSE 8100
 ENTRYPOINT ["/app/chatgpt2api"]
-CMD ["serve", "--config", "/app/config.yaml"]
+CMD ["serve"]

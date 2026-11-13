@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	ErrConnection  = errors.New("无法连接 PostgreSQL，请检查 YAML、网络和数据库权限")
-	ErrEnvironment = errors.New("请移除 PG* 连接环境变量，数据库配置只读取 YAML")
+	ErrConnection  = errors.New("无法连接 PostgreSQL，请检查 DB_* 配置、网络和数据库权限")
+	ErrEnvironment = errors.New("请移除 PG* 连接环境变量，数据库配置使用 .env 或进程环境的 DB_* 变量")
 )
 
 type Database struct {

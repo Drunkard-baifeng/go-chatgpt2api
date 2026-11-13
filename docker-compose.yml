@@ -1,39 +1,14 @@
+# Linux / 1Panel：仅部署应用，PostgreSQL 由用户独立部署。
 services:
-  postgres:
-    image: postgres:18
-    environment:
-      POSTGRES_DB: chatgpt2api_go
-      POSTGRES_USER: chatgpt2api
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 中填写 PostgreSQL 密码}
-    volumes:
-      - go_postgres_data:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chatgpt2api -d chatgpt2api_go"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    restart: unless-stopped
-
   api:
     image: ghcr.io/drunkard-baifeng/go-chatgpt2api:latest
-    build:
-      context: .
-      dockerfile: go_backend/Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:8100:8100"
+    env_file:
+      - .env
+    network_mode: host
     volumes:
       - go_image_data:/app/data
-      - type: bind
-        source: ./go_backend/config.yaml
-        target: /app/config.yaml
-        read_only: true
-        bind:
-          create_host_path: false
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8100/health/ready"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${SERVER_PORT:-8100}/health/ready"]
       interval: 15s
       timeout: 3s
       retries: 3
@@ -41,5 +16,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  go_postgres_data:
   go_image_data:

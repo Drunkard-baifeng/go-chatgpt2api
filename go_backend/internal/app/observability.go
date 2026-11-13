@@ -30,9 +30,9 @@ func observabilityError(c *gin.Context, err error) {
 func registerObservabilityRoutes(router *gin.Engine, options Options) {
 	imageBaseURL := func(c *gin.Context) (string, error) {
 		if options.Assets != nil {
-			return options.Assets.ResolvePublicBaseURL(c.Request.Context(), imageRequestBaseURL(c.Request))
+			return options.Assets.ResolvePublicBaseURL(c.Request.Context(), imageRequestBaseURL(c.Request, options.Config.TrustedProxies...))
 		}
-		return imageRequestBaseURL(c.Request), nil
+		return imageRequestBaseURL(c.Request, options.Config.TrustedProxies...), nil
 	}
 	register := func(method, path string, handler gin.HandlerFunc) {
 		router.Handle(method, path, func(c *gin.Context) {

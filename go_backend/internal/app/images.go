@@ -3,8 +3,11 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,7 +50,7 @@ func registerImageRoutes(router *gin.Engine, options Options) {
 				}()
 				req, e := images.ParseRequest(c.Request, route.edit)
 				if e == nil {
-					req.BaseURL = imageRequestBaseURL(c.Request)
+					req.BaseURL = imageRequestBaseURL(c.Request, options.Config.TrustedProxies...)
 					parsed = req
 				}
 				return req, e
@@ -170,9 +173,8 @@ func sendImageEvent(response *responseDelivery, ctx context.Context, payload gin
 	return response.send(ctx, append(append([]byte("event: "+kind+"\ndata: "), data...), []byte("\n\n")...))
 }
 
-// Only the actual HTTP origin participates; forwarding headers require a
-// separately configured trusted proxy and never replace the request authority.
-func imageRequestBaseURL(r *http.Request) string {
+// 只有直接连接来自可信代理时才消费转发头；代理必须覆盖而非追加来源头。
+func imageRequestBaseURL(r *http.Request, trustedProxies ...string) string {
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
@@ -181,9 +183,50 @@ func imageRequestBaseURL(r *http.Request) string {
 	if host == "" {
 		host = r.URL.Host
 	}
+	peer, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil {
+		ip, err := netip.ParseAddr(peer)
+		if err == nil {
+			ip = ip.Unmap()
+			for _, trusted := range trustedProxies {
+				prefix, err := netip.ParsePrefix(trusted)
+				match := err == nil && prefix.Contains(ip)
+				if address, err := netip.ParseAddr(trusted); err == nil {
+					match = address.Unmap() == ip
+				}
+				if !match {
+					continue
+				}
+				if values := r.Header.Values("X-Forwarded-Proto"); len(values) != 0 {
+					if len(values) != 1 || (values[0] != "http" && values[0] != "https") {
+						return ""
+					}
+					scheme = values[0]
+				}
+				if values := r.Header.Values("X-Forwarded-Host"); len(values) != 0 {
+					if len(values) != 1 {
+						return ""
+					}
+					host = values[0]
+				}
+				break
+			}
+		}
+	}
 	parsed, err := url.Parse(scheme + "://" + host)
-	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" || strings.ContainsAny(host, "\\\r\n\t ") {
+	if err != nil || parsed.Hostname() == "" || parsed.User != nil || parsed.Path != "" || strings.ContainsAny(host, "\\\r\n\t ,?#%") {
 		return ""
+	}
+	if port := parsed.Port(); port != "" {
+		n, err := strconv.Atoi(port)
+		if err != nil || n < 1 || n > 65535 {
+			return ""
+		}
+	}
+	if strings.Contains(parsed.Hostname(), ":") {
+		if _, err := netip.ParseAddr(parsed.Hostname()); err != nil || !strings.HasPrefix(host, "[") {
+			return ""
+		}
 	}
 	return parsed.String()
 }

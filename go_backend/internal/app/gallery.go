@@ -57,7 +57,7 @@ func registerGalleryRoutes(router *gin.Engine, options Options) {
 		if e != nil {
 			return nil, e
 		}
-		return options.Assets.List(c.Request.Context(), images.GalleryQuery{BaseURL: imageRequestBaseURL(c.Request), Page: page, PageSize: size, MediaType: c.Query("media_type"), Tag: c.Query("tag"), Search: c.Query("search"), StartDate: c.Query("start_date"), EndDate: c.Query("end_date")})
+		return options.Assets.List(c.Request.Context(), images.GalleryQuery{BaseURL: imageRequestBaseURL(c.Request, options.Config.TrustedProxies...), Page: page, PageSize: size, MediaType: c.Query("media_type"), Tag: c.Query("tag"), Search: c.Query("search"), StartDate: c.Query("start_date"), EndDate: c.Query("end_date")})
 	})
 	register("POST", "/api/images/delete", func(c *gin.Context) (any, error) {
 		var input struct {

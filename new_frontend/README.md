@@ -12,7 +12,7 @@ Status: current
 
 ## 本地运行
 
-先按 [运行环境](../README.md#运行环境) 安装 Node.js。版本文件位于本目录 `.node-version`，安装时通过 `engines.node` 和 `.npmrc` 拒绝旧补丁。
+先按 [运行环境](../README.md#构建与启动) 安装 Node.js。版本文件位于本目录 `.node-version`，安装时通过 `engines.node` 和 `.npmrc` 拒绝旧补丁。
 
 在仓库根目录安装本入口的依赖：
 
@@ -44,7 +44,7 @@ npm --prefix new_frontend run preview
 
 上述命令仅构建前端到 `new_frontend/dist`；本地预览使用 4176 端口并保留同一后端代理。
 正式打包从项目根目录执行 `node scripts/build.mjs`，自动构建前端、复制至后端内嵌资源目录并编译单文件服务。
-`node scripts/build.mjs --prepare` 只准备内嵌资源；资源目录和二进制均不纳入 Git。正式构建固定使用同源 API，运行时无需部署此目录；可选反代见 [Nginx 示例](../deploy/nginx-server.conf.example)。
+`node scripts/build.mjs --prepare` 只准备内嵌资源；资源目录和二进制均不纳入 Git。正式构建固定使用同源 API，运行时无需部署此目录；可选反代见 [Nginx 配置与超时说明](../README.md#nginx-反向代理)。
 
 ## 功能范围
 

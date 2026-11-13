@@ -246,7 +246,7 @@ func launchAndWait(parent context.Context, directory string, p installPlan, tag 
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(p.Target, "--internal-update-child", directory, "serve", "--config", p.Config)
+	cmd := exec.Command(p.Target, "--internal-update-child", directory, "serve", "--env-file", p.Config)
 	cmd.Dir = p.WorkingDirectory
 	configureProcess(cmd)
 	cmd.Stdout, cmd.Stderr = log, log

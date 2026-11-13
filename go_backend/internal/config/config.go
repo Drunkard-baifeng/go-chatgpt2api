@@ -1,4 +1,4 @@
-// Package config 只从显式 YAML 文件生成启动快照，不读取环境变量覆盖。
+// Package config 从可选 .env 与进程环境生成唯一启动快照，不改写进程环境。
 package config
 
 import (
@@ -12,80 +12,79 @@ import (
 	"strconv"
 	"strings"
 
-	"go.yaml.in/yaml/v3"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Server        Server        `yaml:"server"`
-	Auth          Auth          `yaml:"auth"`
-	Database      Database      `yaml:"database"`
-	Upstream      Upstream      `yaml:"upstream"`
-	Images        Images        `yaml:"images"`
-	ImageTasks    ImageTasks    `yaml:"image_tasks"`
-	EditableFiles EditableFiles `yaml:"editable_files"`
+	Server        Server
+	Auth          Auth
+	Database      Database
+	Upstream      Upstream
+	Images        Images
+	ImageTasks    ImageTasks
+	EditableFiles EditableFiles
 }
 
 type Server struct {
-	Host                     string   `yaml:"host"`
-	Port                     int      `yaml:"port"`
-	AllowedOrigins           []string `yaml:"allowed_origins"`
-	TrustedProxies           []string `yaml:"trusted_proxies"`
-	ReadHeaderTimeoutSeconds int      `yaml:"read_header_timeout_seconds"`
-	IdleTimeoutSeconds       int      `yaml:"idle_timeout_seconds"`
-	ShutdownTimeoutSeconds   int      `yaml:"shutdown_timeout_seconds"`
+	Host                     string   `env:"SERVER_HOST"`
+	Port                     int      `env:"SERVER_PORT"`
+	AllowedOrigins           []string `env:"SERVER_ALLOWED_ORIGINS"`
+	TrustedProxies           []string `env:"SERVER_TRUSTED_PROXIES"`
+	ReadHeaderTimeoutSeconds int      `env:"SERVER_READ_HEADER_TIMEOUT_SECONDS"`
+	IdleTimeoutSeconds       int      `env:"SERVER_IDLE_TIMEOUT_SECONDS"`
+	ShutdownTimeoutSeconds   int      `env:"SERVER_SHUTDOWN_TIMEOUT_SECONDS"`
 }
 
 type Auth struct {
-	AdminKey string `yaml:"admin_key"`
+	AdminKey string `env:"ADMIN_KEY"`
 }
 
 type Database struct {
-	Type                         string `yaml:"type"`
-	Host                         string `yaml:"host"`
-	Port                         int    `yaml:"port"`
-	Name                         string `yaml:"name"`
-	Username                     string `yaml:"username"`
-	Password                     string `yaml:"password"`
-	SSLMode                      string `yaml:"sslmode"`
-	ConnectTimeoutSeconds        int    `yaml:"connect_timeout_seconds"`
-	OperationTimeoutSeconds      int    `yaml:"operation_timeout_seconds"`
-	MaxOpenConnections           int    `yaml:"max_open_connections"`
-	MaxIdleConnections           int    `yaml:"max_idle_connections"`
-	ConnectionMaxLifetimeSeconds int    `yaml:"connection_max_lifetime_seconds"`
+	Type                         string
+	Host                         string `env:"DB_HOST"`
+	Port                         int    `env:"DB_PORT"`
+	Name                         string `env:"DB_NAME"`
+	Username                     string `env:"DB_USER"`
+	Password                     string `env:"DB_PASSWORD"`
+	SSLMode                      string `env:"DB_SSLMODE"`
+	ConnectTimeoutSeconds        int    `env:"DB_CONNECT_TIMEOUT_SECONDS"`
+	OperationTimeoutSeconds      int    `env:"DB_OPERATION_TIMEOUT_SECONDS"`
+	MaxOpenConnections           int    `env:"DB_MAX_OPEN_CONNECTIONS"`
+	MaxIdleConnections           int    `env:"DB_MAX_IDLE_CONNECTIONS"`
+	ConnectionMaxLifetimeSeconds int    `env:"DB_CONNECTION_MAX_LIFETIME_SECONDS"`
 }
 
 type Upstream struct {
-	AccountID              string `yaml:"account_id"`
-	TextTimeoutSeconds     int    `yaml:"text_timeout_seconds"`
-	Profile                string `yaml:"profile"`
-	TotalTimeoutSeconds    int    `yaml:"total_timeout_seconds"`
-	HeaderTimeoutSeconds   int    `yaml:"header_timeout_seconds"`
-	ReadIdleTimeoutSeconds int    `yaml:"read_idle_timeout_seconds"`
-	MaxResponseBytes       int64  `yaml:"max_response_bytes"`
-	ImageStreamSeconds     int    `yaml:"image_stream_seconds"`
-	ImagePollSeconds       int    `yaml:"image_poll_seconds"`
+	AccountID              string `env:"UPSTREAM_ACCOUNT_ID"`
+	TextTimeoutSeconds     int    `env:"UPSTREAM_TEXT_TIMEOUT_SECONDS"`
+	Profile                string `env:"UPSTREAM_PROFILE"`
+	TotalTimeoutSeconds    int    `env:"UPSTREAM_TOTAL_TIMEOUT_SECONDS"`
+	HeaderTimeoutSeconds   int    `env:"UPSTREAM_HEADER_TIMEOUT_SECONDS"`
+	ReadIdleTimeoutSeconds int    `env:"UPSTREAM_READ_IDLE_TIMEOUT_SECONDS"`
+	MaxResponseBytes       int64  `env:"UPSTREAM_MAX_RESPONSE_BYTES"`
+	ImageStreamSeconds     int    `env:"UPSTREAM_IMAGE_STREAM_SECONDS"`
+	ImagePollSeconds       int    `env:"UPSTREAM_IMAGE_POLL_SECONDS"`
 }
 
 type Images struct {
-	Directory     string `yaml:"directory"`
-	PublicBaseURL string `yaml:"public_base_url"`
+	Directory string `env:"IMAGES_DIRECTORY"`
 }
 
 type ImageTasks struct {
-	Directory string `yaml:"directory"`
-	Workers   int    `yaml:"workers"`
-	Queue     int    `yaml:"queue"`
+	Directory string `env:"IMAGE_TASKS_DIRECTORY"`
+	Workers   int    `env:"IMAGE_TASKS_WORKERS"`
+	Queue     int    `env:"IMAGE_TASKS_QUEUE"`
 }
 
 type EditableFiles struct {
-	Directory string `yaml:"directory"`
-	Workers   int    `yaml:"workers"`
-	Queue     int    `yaml:"queue"`
+	Directory string `env:"EDITABLE_FILES_DIRECTORY"`
+	Workers   int    `env:"EDITABLE_FILES_WORKERS"`
+	Queue     int    `env:"EDITABLE_FILES_QUEUE"`
 }
 
 func defaults() Config {
 	return Config{
-		Server:        Server{Host: "127.0.0.1", Port: 8100, ReadHeaderTimeoutSeconds: 10, IdleTimeoutSeconds: 120, ShutdownTimeoutSeconds: 15},
+		Server:        Server{Host: "127.0.0.1", Port: 8100, ReadHeaderTimeoutSeconds: 10, IdleTimeoutSeconds: 120, ShutdownTimeoutSeconds: 15, TrustedProxies: []string{"127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"}},
 		Database:      Database{Type: "postgresql", Host: "127.0.0.1", Port: 5432, SSLMode: "prefer", ConnectTimeoutSeconds: 10, OperationTimeoutSeconds: 30, MaxOpenConnections: 30, MaxIdleConnections: 10, ConnectionMaxLifetimeSeconds: 3600},
 		Upstream:      Upstream{Profile: "chrome_146", TextTimeoutSeconds: 300, TotalTimeoutSeconds: 170, HeaderTimeoutSeconds: 30, ReadIdleTimeoutSeconds: 30, MaxResponseBytes: 16 << 20, ImageStreamSeconds: 80, ImagePollSeconds: 60},
 		Images:        Images{Directory: "data/images"},
@@ -97,32 +96,31 @@ func defaults() Config {
 // Load 不返回包含输入值的解析错误，避免凭据进入日志。
 func Load(path string) (Config, error) {
 	var zero Config
-	file, err := os.Open(path)
-	if err != nil {
-		return zero, errors.New("无法读取 YAML 配置文件，请通过 --config 指定存在的文件")
-	}
-	defer file.Close()
-	data, err := io.ReadAll(io.LimitReader(file, (1<<20)+1))
-	if err != nil || len(data) > 1<<20 {
-		return zero, errors.New("配置读取失败或文件超过 1 MiB")
-	}
-	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
-	var document yaml.Node
-	if err := decoder.Decode(&document); err != nil || len(document.Content) != 1 {
-		return zero, errors.New("YAML 语法无效或配置为空")
-	}
-	var extra yaml.Node
-	if err := decoder.Decode(&extra); err != io.EOF {
-		return zero, errors.New("配置只能包含一个 YAML 文档")
-	}
-	if err := validateNode(document.Content[0], reflect.TypeOf(zero)); err != nil {
-		return zero, err
+	values := map[string]string{}
+	if path != "" {
+		file, err := os.Open(path)
+		if err != nil {
+			if !os.IsNotExist(err) || filepath.Base(path) != ".env" {
+				return zero, errors.New("无法读取 .env 文件")
+			}
+		} else {
+			defer file.Close()
+			data, err := io.ReadAll(io.LimitReader(file, (1<<20)+1))
+			if err != nil || len(data) > 1<<20 {
+				return zero, errors.New(".env 读取失败或超过 1 MiB")
+			}
+			values, err = godotenv.Unmarshal(string(data))
+			if err != nil {
+				return zero, errors.New(".env 语法无效，请检查变量赋值和引号")
+			}
+		}
 	}
 	cfg := defaults()
-	strict := yaml.NewDecoder(strings.NewReader(string(data)))
-	strict.KnownFields(true)
-	if err := strict.Decode(&cfg); err != nil {
-		return zero, errors.New("YAML 字段、类型或重复键无效")
+	if err := readEnvironment(reflect.ValueOf(&cfg).Elem(), values); err != nil {
+		return zero, err
+	}
+	if len(values) != 0 {
+		return zero, errors.New(".env 包含未知变量，请对照 .env.example 检查名称")
 	}
 	cfg.Auth.AdminKey = strings.TrimSpace(cfg.Auth.AdminKey)
 	if err := cfg.validate(); err != nil {
@@ -140,6 +138,7 @@ func Load(path string) (Config, error) {
 		}
 		*directory = absolute
 	}
+	var err error
 	canonical := make([]string, len(directories))
 	for i, directory := range directories {
 		canonical[i], err = canonicalDirectory(*directory)
@@ -183,72 +182,67 @@ func directoryContains(parent, child string) bool {
 	return err == nil && (relative == "." || relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)))
 }
 
-func validateNode(node *yaml.Node, kind reflect.Type) error {
-	if node.Kind == yaml.AliasNode || node.Tag == "!!null" {
-		return errors.New("配置不接受空值、别名或合并键")
-	}
-	switch kind.Kind() {
-	case reflect.Struct:
-		if node.Kind != yaml.MappingNode {
-			return errors.New("配置分区必须是映射")
-		}
-		fields := make(map[string]reflect.Type, kind.NumField())
-		for i := 0; i < kind.NumField(); i++ {
-			f := kind.Field(i)
-			fields[f.Tag.Get("yaml")] = f.Type
-		}
-		seen := make(map[string]bool)
-		for i := 0; i < len(node.Content); i += 2 {
-			key, value := node.Content[i], node.Content[i+1]
-			field, exists := fields[key.Value]
-			if key.Tag != "!!str" || !exists || seen[key.Value] {
-				return errors.New("配置包含未知字段、重复键或合并键")
-			}
-			seen[key.Value] = true
-			if err := validateNode(value, field); err != nil {
+// 同名进程环境优先；文件只生成当前快照，不调用 os.Setenv。
+func readEnvironment(value reflect.Value, values map[string]string) error {
+	for i := 0; i < value.NumField(); i++ {
+		field := value.Field(i)
+		if field.Kind() == reflect.Struct {
+			if err := readEnvironment(field, values); err != nil {
 				return err
 			}
+			continue
 		}
-	case reflect.Slice:
-		if node.Kind != yaml.SequenceNode {
-			return errors.New("配置列表类型无效")
+		key := value.Type().Field(i).Tag.Get("env")
+		if key == "" {
+			continue
 		}
-		for _, item := range node.Content {
-			if err := validateNode(item, kind.Elem()); err != nil {
-				return err
+		raw, exists := values[key]
+		delete(values, key)
+		if environment, ok := os.LookupEnv(key); ok {
+			raw, exists = environment, true
+		}
+		if !exists {
+			continue
+		}
+		switch field.Kind() {
+		case reflect.String:
+			field.SetString(raw)
+		case reflect.Int, reflect.Int64:
+			parsed, err := strconv.ParseInt(strings.TrimSpace(raw), 10, field.Type().Bits())
+			if err != nil {
+				return errors.New(key + " 必须为整数")
 			}
+			field.SetInt(parsed)
+		case reflect.Slice:
+			items := []string{}
+			if strings.TrimSpace(raw) != "" {
+				for _, item := range strings.Split(raw, ",") {
+					items = append(items, strings.TrimSpace(item))
+				}
+			}
+			field.Set(reflect.ValueOf(items))
 		}
-	case reflect.String:
-		if node.Kind != yaml.ScalarNode || node.Tag != "!!str" {
-			return errors.New("文本配置必须是字符串")
-		}
-	case reflect.Int, reflect.Int64:
-		if node.Kind != yaml.ScalarNode || node.Tag != "!!int" {
-			return errors.New("数值配置必须使用整数，不能加引号")
-		}
-	default:
-		return errors.New("不支持的配置类型")
 	}
 	return nil
 }
 
 func (c Config) validate() error {
 	if strings.TrimSpace(c.Server.Host) == "" || c.Server.Port < 1 || c.Server.Port > 65535 {
-		return errors.New("server 的地址或端口无效")
+		return errors.New("SERVER_HOST 或 SERVER_PORT 无效")
 	}
 	if c.Auth.AdminKey == "" {
-		return errors.New("auth.admin_key 必须填写")
+		return errors.New("ADMIN_KEY 必须填写")
 	}
 	if c.Database.Type != "postgresql" {
 		return errors.New("Go 后端只支持 PostgreSQL")
 	}
 	if strings.TrimSpace(c.Database.Host) == "" || strings.TrimSpace(c.Database.Name) == "" || strings.TrimSpace(c.Database.Username) == "" || c.Database.Port < 1 || c.Database.Port > 65535 {
-		return errors.New("database 的地址、名称、用户或端口无效")
+		return errors.New("DB_HOST、DB_NAME、DB_USER 或 DB_PORT 无效")
 	}
 	switch c.Database.SSLMode {
 	case "disable", "allow", "prefer", "require", "verify-ca", "verify-full":
 	default:
-		return errors.New("database.sslmode 无效")
+		return errors.New("DB_SSLMODE 无效")
 	}
 	if c.Database.MaxOpenConnections < 1 || c.Database.MaxIdleConnections < 0 || c.Database.MaxIdleConnections > c.Database.MaxOpenConnections {
 		return errors.New("数据库连接池上下限无效")
@@ -273,18 +267,6 @@ func (c Config) validate() error {
 	if strings.TrimSpace(c.EditableFiles.Directory) == "" || c.EditableFiles.Workers < 1 || c.EditableFiles.Workers > 8 || c.EditableFiles.Queue < 1 || c.EditableFiles.Queue > 64 {
 		return errors.New("可编辑文件目录不能为空，workers 必须为 1–8，queue 必须为 1–64")
 	}
-	if c.Images.PublicBaseURL != "" {
-		u, err := url.Parse(c.Images.PublicBaseURL)
-		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.Fragment != "" || u.RawQuery != "" || u.Opaque != "" || u.ForceQuery || strings.Contains(c.Images.PublicBaseURL, "#") {
-			return errors.New("图片公开基础地址无效")
-		}
-		if u.Port() != "" {
-			port, e := strconv.Atoi(u.Port())
-			if e != nil || port < 1 || port > 65535 {
-				return errors.New("图片公开基础地址端口无效")
-			}
-		}
-	}
 	for _, proxy := range c.Server.TrustedProxies {
 		if _, err := netip.ParsePrefix(proxy); err != nil {
 			if _, err := netip.ParseAddr(proxy); err != nil {
@@ -295,7 +277,7 @@ func (c Config) validate() error {
 	for _, origin := range c.Server.AllowedOrigins {
 		u, err := url.Parse(origin)
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.Path != "" || strings.ContainsAny(origin, "*?#") {
-			return errors.New("server.allowed_origins 必须使用完整 HTTP(S) 来源，不包含通配符、路径、凭据、查询或片段")
+			return errors.New("SERVER_ALLOWED_ORIGINS 必须使用完整 HTTP(S) 来源，不包含通配符、路径、凭据、查询或片段")
 		}
 		if u.Port() != "" {
 			port, err := strconv.Atoi(u.Port())

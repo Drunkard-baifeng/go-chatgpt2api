@@ -55,12 +55,11 @@ var specs = func() map[string]fieldSpec {
 }()
 
 type Service struct {
-	db            *sql.DB
-	timeout       time.Duration
-	mu            sync.RWMutex
-	startup       map[string]any
-	publicBaseURL string
-	execution     ExecutionCapabilities
+	db        *sql.DB
+	timeout   time.Duration
+	mu        sync.RWMutex
+	startup   map[string]any
+	execution ExecutionCapabilities
 }
 
 // ExecutionCapabilities 由入口按实际安装的执行器设置，业务设置不能伪造运行能力。
@@ -85,7 +84,7 @@ func New(db *sql.DB, timeout time.Duration) *Service {
 }
 
 // ConfigureStartup 仅接收启动配置所有者提供的公开白名单；在注册路由前调用。
-func (s *Service) ConfigureStartup(public map[string]any, baseURL string) {
+func (s *Service) ConfigureStartup(public map[string]any) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for key := range s.startup {
@@ -93,7 +92,6 @@ func (s *Service) ConfigureStartup(public map[string]any, baseURL string) {
 			s.startup[key] = v
 		}
 	}
-	s.publicBaseURL = strings.TrimRight(baseURL, "/")
 }
 
 func (s *Service) load(ctx context.Context) (map[string]any, error) {
@@ -174,11 +172,6 @@ func (s *Service) values(raw map[string]any, mask bool) map[string]any {
 		}
 		set(result, path, clone(value))
 	}
-	s.mu.RLock()
-	if s.publicBaseURL != "" {
-		result["base_url"] = s.publicBaseURL
-	}
-	s.mu.RUnlock()
 	return result
 }
 func (s *Service) project(raw map[string]any) map[string]any {
@@ -189,12 +182,6 @@ func (s *Service) project(raw map[string]any) map[string]any {
 			source = "configured"
 		}
 		readOnly := spec.ReadOnly
-		s.mu.RLock()
-		if path == "base_url" && s.publicBaseURL != "" {
-			source = "yaml"
-			readOnly = true
-		}
-		s.mu.RUnlock()
 		fields[path] = map[string]any{"source": source, "default": clone(spec.Default), "min": spec.Min, "max": spec.Max, "options": spec.Options, "unit": spec.Unit, "read_only": readOnly, "restart_required": spec.RestartRequired, "sensitive": spec.Sensitive}
 	}
 	s.mu.RLock()
@@ -214,12 +201,6 @@ func (s *Service) Patch(ctx context.Context, input map[string]any) (map[string]a
 	patch, err := normalizePatch(request, "")
 	if err != nil {
 		return nil, err
-	}
-	s.mu.RLock()
-	lockedBase := s.publicBaseURL != ""
-	s.mu.RUnlock()
-	if _, ok := patch["base_url"]; ok && lockedBase {
-		return nil, ErrInput
 	}
 	if s.db == nil {
 		return nil, ErrStorage

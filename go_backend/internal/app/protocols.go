@@ -53,7 +53,7 @@ func registerProtocolRoutes(router *gin.Engine, options Options) {
 			}
 			r := &protocolResponse{responseDelivery: delivery, kind: path, stream: request.Stream, tools: request.Tools, id: hex.EncodeToString(random[:]), model: request.Text.Model, created: time.Now().Unix(), request: request.Text}
 			if request.Image != nil {
-				request.Image.BaseURL = imageRequestBaseURL(c.Request)
+				request.Image.BaseURL = imageRequestBaseURL(c.Request, options.Config.TrustedProxies...)
 				if options.Images == nil {
 					writeImageError(c, images.PublicError(images.ErrUnavailable))
 					return

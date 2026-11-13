@@ -1,13 +1,12 @@
 <template>
   <div class="space-y-4">
-    <FormSection v-if="startup" title="启动配置 · YAML" subtitle="以下是当前进程实际使用的配置。请修改配置文件后重启后端；日常业务选项仍在此页保存。">
+    <FormSection v-if="startup" title="启动配置 · 环境变量" subtitle="以下是当前进程实际使用的配置。请修改 .env 或容器环境后重启后端；日常业务选项仍在此页保存。">
       <dl class="startup-config-grid">
-        <div class="startup-config-path"><dt>配置文件</dt><dd>{{ startup.config_path }}</dd></div>
+        <div class="startup-config-path"><dt>配置来源</dt><dd>{{ startup.config_path }}</dd></div>
         <div><dt>监听地址</dt><dd>{{ startup.server_host }} : {{ startup.server_port }}</dd></div>
-        <div><dt>数据库类型</dt><dd>{{ startup.database_type === 'postgresql' ? 'PostgreSQL' : 'SQLite' }}</dd></div>
+        <div><dt>数据库类型</dt><dd>PostgreSQL</dd></div>
         <div v-if="startup.database_host"><dt>数据库地址</dt><dd>{{ startup.database_host }} : {{ startup.database_port }}</dd></div>
         <div v-if="startup.database_name"><dt>数据库名称</dt><dd>{{ startup.database_name }}</dd></div>
-        <div><dt>同步线程容量</dt><dd>{{ startup.thread_tokens }}</dd></div>
       </dl>
       <p class="mt-3 text-xs text-muted-foreground">管理员密钥、数据库密码不在页面中展示。</p>
     </FormSection>
@@ -23,15 +22,15 @@
 
         <FormField label="图片访问地址">
           <template #label-extra>
-            <HelpTip text="用于生成图片结果的访问前缀地址。" />
+            <HelpTip text="可选的图片访问前缀。留空自动使用当前访问地址，反向代理无需填写。" />
           </template>
           <Input
             v-model.trim="settings.base_url"
             block
             :disabled="fieldReadOnly('base_url')"
-            placeholder="https://example.com"
+            placeholder="留空自动识别访问地址"
           />
-          <p v-if="fieldReadOnly('base_url')" class="mt-1 text-xs text-muted-foreground">由 YAML 的 server.public_base_url 指定，修改后重启生效。</p>
+          <p class="mt-1 text-xs text-muted-foreground">留空自动识别域名和协议；仅自定义图片域名时填写。</p>
         </FormField>
 
         <FormField label="图片自动清理">

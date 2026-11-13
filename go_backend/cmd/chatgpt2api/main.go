@@ -51,10 +51,10 @@ func parseArguments(args []string, help io.Writer) (arguments, error) {
 	result := arguments{command: "serve"}
 	flags := flag.NewFlagSet("chatgpt2api", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
-	flags.StringVar(&result.configPath, "config", "", "显式 YAML 配置文件路径")
+	flags.StringVar(&result.configPath, "env-file", ".env", "可选环境文件路径，默认 .env；进程环境优先")
 	flags.BoolVar(&result.offline, "offline", false, "确认所有写入者已离线，仅用于接管")
 	usage := func() {
-		fmt.Fprintln(help, "用法：chatgpt2api [serve | db status | db verify | db migrate | db adopt --offline] --config <配置文件>")
+		fmt.Fprintln(help, "用法：chatgpt2api [serve | db status | db verify | db migrate | db adopt --offline] [--env-file .env]")
 	}
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -97,7 +97,7 @@ func parseArguments(args []string, help io.Writer) (arguments, error) {
 		return result, errors.New("--offline 仅用于 db adopt")
 	}
 	if strings.TrimSpace(result.configPath) == "" {
-		return result, errors.New("必须通过 --config 明确指定 YAML 文件")
+		return result, errors.New("--env-file 路径不能为空")
 	}
 	return result, nil
 }
@@ -199,7 +199,7 @@ func runReady(ctx context.Context, args []string, output, help io.Writer, logger
 	accountRepository := accounts.New(db.Ent, budget)
 	defer accountRepository.Close()
 	settingsService := settings.New(db.SQL, budget)
-	settingsService.ConfigureStartup(map[string]any{"server_host": cfg.Server.Host, "server_port": cfg.Server.Port, "database_host": cfg.Database.Host, "database_port": cfg.Database.Port, "database_name": cfg.Database.Name}, cfg.Images.PublicBaseURL)
+	settingsService.ConfigureStartup(map[string]any{"config_path": ".env / 进程环境", "server_host": cfg.Server.Host, "server_port": cfg.Server.Port, "database_host": cfg.Database.Host, "database_port": cfg.Database.Port, "database_name": cfg.Database.Name})
 	logger = slog.New(settings.NewConsoleHandler(logger.Handler(), settingsService.Runtime))
 	slog.SetDefault(logger)
 	proxyService := proxy.New(db.SQL, budget)
@@ -219,7 +219,7 @@ func runReady(ctx context.Context, args []string, output, help io.Writer, logger
 		return err
 	}
 	defer promptService.Close()
-	assets, err := images.NewImageStorageService(cfg.Images.Directory, cfg.Images.PublicBaseURL)
+	assets, err := images.NewImageStorageService(cfg.Images.Directory, "")
 	if err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func runReady(ctx context.Context, args []string, output, help io.Writer, logger
 	}
 	listener, err := net.Listen("tcp", net.JoinHostPort(cfg.Server.Host, strconv.Itoa(cfg.Server.Port)))
 	if err != nil {
-		return errors.New("HTTP 监听失败，请检查 YAML 的地址和端口")
+		return errors.New("HTTP 监听失败，请检查 SERVER_HOST 和 SERVER_PORT")
 	}
 	defer listener.Close()
 	logger.Info("Go 基础服务启动", "version", version, "address", listener.Addr().String())

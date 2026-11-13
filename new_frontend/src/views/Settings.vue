@@ -30,7 +30,7 @@
       <div v-if="activeSettingsTab === 'basic'" class="cpa-settings-basic space-y-4">
         <SurfaceBox density="compact">
           <p class="text-xs leading-5 text-muted-foreground">
-            管理员登录密钥从 YAML 启动配置读取，不在此页面展示；如需分发给其他人，请到左侧<RouterLink to="/user-keys" class="font-semibold text-primary underline underline-offset-2">用户密钥</RouterLink>创建普通用户密钥。
+            管理员登录密钥从 .env 或进程环境读取，不在此页面展示；如需分发给其他人，请到左侧<RouterLink to="/user-keys" class="font-semibold text-primary underline underline-offset-2">用户密钥</RouterLink>创建普通用户密钥。
           </p>
         </SurfaceBox>
 

@@ -7,7 +7,7 @@ import (
 	"chatgpt2api/go_backend/internal/managedhttp"
 )
 
-// ResolvePublicBaseURL 统一图片输出来源：YAML、业务设置、请求实际地址。
+// ResolvePublicBaseURL 统一图片输出来源：显式存储来源、业务设置、请求来源。
 // 仅解析公开地址，不建立网络连接；错误不携带原始配置。
 func (s *ImageStorageService) ResolvePublicBaseURL(ctx context.Context, fallback string) (string, error) {
 	if err := ctx.Err(); err != nil {

@@ -112,7 +112,7 @@ func registerImageTaskRoutes(router *gin.Engine, options Options) {
 					var parseErr error
 					id, request, parseErr = images.ParseTaskRequest(c.Request, route.edit)
 					if parseErr == nil {
-						request.BaseURL = imageRequestBaseURL(c.Request)
+						request.BaseURL = imageRequestBaseURL(c.Request, options.Config.TrustedProxies...)
 					}
 					return parseErr
 				})
